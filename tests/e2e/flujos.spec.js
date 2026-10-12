@@ -79,7 +79,7 @@ test.describe('Semana actual', () => {
     await comoRol(page, 'SUPERVISOR');
     await page.goto('/semana');
     await expect(page.locator('.kpi').first()).toContainText('29 registros');
-    await page.getByRole('button', { name: 'Eliminar' }).first().click();
+    await page.getByRole('button', { name: 'Eliminar', exact: true }).first().click();
     await page.getByRole('button', { name: 'Sí' }).click();
     await expect(page.locator('.toast')).toHaveText('Registro eliminado');
     await expect(page.locator('.kpi').first()).toContainText('28 registros');
@@ -87,7 +87,8 @@ test.describe('Semana actual', () => {
     await page.getByRole('button', { name: 'Cerrar semana' }).click();
     await page.getByRole('button', { name: 'Sí' }).click();
     await expect(page.locator('.view-head .badge')).toHaveText('Cerrada · pagada');
-    await expect(page.getByRole('button', { name: 'Eliminar' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Eliminar', exact: true })).toHaveCount(0);
+    await expect(page.locator('.casilla')).toHaveCount(0);
   });
 
   test('la capturista ve las acciones deshabilitadas', async ({ page }) => {
@@ -95,7 +96,7 @@ test.describe('Semana actual', () => {
     await page.goto('/semana');
     await expect(page.getByRole('button', { name: 'Cerrar semana' })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Cerrar semana' })).toHaveAttribute('title', 'Solo supervisor');
-    await expect(page.getByRole('button', { name: 'Eliminar' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Eliminar', exact: true })).toHaveCount(0);
   });
 
   test('la semana va en la URL y el clic en una fila abre el reporte', async ({ page }) => {
@@ -106,6 +107,74 @@ test.describe('Semana actual', () => {
     await page.locator('tr.clickable').first().click();
     await expect(page).toHaveURL(/\/reportes\/empleado\/\d+$/);
   });
+});
+
+test.describe('Borrado masivo', () => {
+  test('en Semana: marcar varias casillas y eliminarlas juntas', async ({ page }) => {
+    await comoRol(page, 'SUPERVISOR');
+    await page.goto('/semana');
+    const borrar = page.getByRole('button', { name: /Eliminar seleccionados/ });
+    await expect(borrar).toBeDisabled();
+    const casillas = page.locator('tbody .casilla');
+    for (const i of [0, 1, 2]) await casillas.nth(i).check();
+    await expect(borrar).toHaveText('Eliminar seleccionados (3)');
+    await borrar.click();
+    await expect(page.getByText('¿Eliminar 3 registros?')).toBeVisible();
+    await page.getByRole('button', { name: 'Sí' }).click();
+    await expect(page.locator('.toast')).toHaveText('3 registros eliminados');
+    await expect(page.locator('.kpi').first()).toContainText('26 registros');
+    await expect(borrar).toHaveText('Eliminar seleccionados');
+  });
+
+  test('seleccionar todos y cancelar no borra nada', async ({ page }) => {
+    await comoRol(page, 'SUPERVISOR');
+    await page.goto('/semana');
+    await page.getByLabel('Seleccionar todos').check();
+    await page.getByRole('button', { name: 'Eliminar seleccionados (29)' }).click();
+    await page.getByRole('button', { name: 'No' }).click();
+    await expect(page.locator('.kpi').first()).toContainText('29 registros');
+    await page.getByLabel('Seleccionar todos').uncheck();
+    await expect(page.getByRole('button', { name: /Eliminar seleccionados/ })).toBeDisabled();
+  });
+
+  test('en una semana cerrada no hay casillas', async ({ page }) => {
+    await comoRol(page, 'SUPERVISOR');
+    await page.goto('/semana/2026/40');
+    await expect(page.locator('.view-head .badge')).toHaveText('Cerrada · pagada');
+    await expect(page.locator('.casilla')).toHaveCount(0);
+  });
+
+  test('la capturista no ve casillas', async ({ page }) => {
+    await comoRol(page, 'CAPTURISTA');
+    await page.goto('/semana');
+    await expect(page.locator('.kpi').first()).toContainText('29 registros');
+    await expect(page.locator('.casilla')).toHaveCount(0);
+  });
+
+  test('en Por empleado sólo se marcan registros de semanas abiertas', async ({ page }) => {
+    await comoRol(page, 'SUPERVISOR');
+    await page.goto('/reportes/empleado/5');
+    await expect(page.locator('tbody .casilla:disabled').first()).toHaveAttribute('title', 'Semana cerrada: no se puede eliminar');
+    await page.getByLabel('Seleccionar todos').check();
+    await page.getByRole('button', { name: 'Eliminar seleccionados (3)' }).click();
+    await page.getByRole('button', { name: 'Sí' }).click();
+    await expect(page.locator('.toast')).toHaveText('3 registros eliminados');
+    await expect(page.locator('.kpi').nth(1)).toContainText('8 registros');
+  });
+});
+
+test('Por período usa semanas completas de lunes a domingo', async ({ page }) => {
+  await page.goto('/reportes/periodo');
+  await expect(page.locator('.view-head p')).toHaveText('14-sep – 11-oct 2026 · 4 semanas');
+  await page.getByRole('button', { name: 'Septiembre' }).click();
+  await expect(page).toHaveURL(/desde=2026-36&hasta=2026-39/);
+  await expect(page.locator('.view-head p')).toHaveText('31-ago – 27-sep 2026 · 4 semanas');
+  await expect(page.locator('.kpi.hero .k-val')).toHaveText('$19,395');
+  await page.getByRole('button', { name: 'Octubre' }).click();
+  await expect(page.locator('.view-head p')).toHaveText('28-sep – 11-oct 2026 · 2 semanas');
+  await page.locator('#per-desde').selectOption('2026-38');
+  await expect(page.locator('.view-head p')).toHaveText('14-sep – 11-oct 2026 · 4 semanas');
+  await expect(page.locator('#per-desde option')).toHaveText(['Semana 38', 'Semana 39', 'Semana 40', 'Semana 41']);
 });
 
 test('a 400 px ninguna vista tiene scroll horizontal en el body', async ({ page }) => {

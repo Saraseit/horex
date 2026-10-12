@@ -22,7 +22,10 @@ const ANCHOS = [1366, 400];
 // Vistas que cambian a propósito respecto a la demo (docs/DIFERENCIAS_VISUALES.md): se comparan contra
 // una captura aprobada de la app (prefijo "app-"). Si cambian otra vez, revisarlas a ojo y regenerarlas con
 // npx playwright test tests/e2e/visual.spec.js --update-snapshots=all -g "<vista> <ancho>px"
-const DIFERENCIAS_APROBADAS = ['exportar-1366', 'exportar-400', 'empleado-400', 'tarifas-400'];
+const DIFERENCIAS_APROBADAS = [
+  'exportar-1366', 'exportar-400', 'empleado-400', 'tarifas-400', 'periodo-1366', 'periodo-400',
+  'semana-1366-supervisor', 'semana-400-supervisor',
+];
 
 const OPCIONES = process.env.VISUAL_ESTRICTO ? { maxDiffPixels: 0, maxDiffPixelRatio: undefined } : {};
 
@@ -56,9 +59,10 @@ for (const [nombreTema, tema] of Object.entries(TEMAS)) {
 
 for (const ancho of ANCHOS) {
   for (const vista of VISTAS_SUPERVISOR) {
+    const prefijo = DIFERENCIAS_APROBADAS.includes(`${vista}-${ancho}-supervisor`) ? 'app-' : '';
     test(`${vista} ${ancho}px claro supervisor`, async ({ page }) => {
       await abrir(page, VISTAS[vista], { ancho, tema: 'light', rol: 'SUPERVISOR' });
-      await expect(page).toHaveScreenshot(`${vista}-${ancho}-claro-supervisor.png`, OPCIONES);
+      await expect(page).toHaveScreenshot(`${prefijo}${vista}-${ancho}-claro-supervisor.png`, OPCIONES);
     });
   }
 }
