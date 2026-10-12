@@ -2,6 +2,7 @@
 // `node scripts/capturar-referencia.cjs --pruebas`), con la tolerancia de playwright.config.js (1 %).
 // VISUAL_ESTRICTO=1 exige 0 píxeles distintos: sirve para ver cuánto difiere cada vista.
 import { expect, test } from '@playwright/test';
+import { conSesion } from './ayudas.js';
 
 const ALTO_BASE = 768;
 const CSS_OCULTO = '.toast{display:none!important}.sidebar-footer{visibility:hidden!important}';
@@ -27,10 +28,26 @@ const DIFERENCIAS_APROBADAS = [
   'semana-1366-supervisor', 'semana-400-supervisor',
 ];
 
+// Inicio de sesión: pantalla nueva (no está en la demo), comparada contra capturas aprobadas.
+for (const [nombreTema, tema] of [['claro', 'light'], ['oscuro', 'dark']]) {
+  for (const ancho of [1366, 400]) {
+    test(`login ${ancho}px ${nombreTema}`, async ({ page }) => {
+      await conSesion(page, null);
+      await page.emulateMedia({ colorScheme: tema });
+      await page.setViewportSize({ width: ancho, height: 768 });
+      await page.goto('/registrar');
+      await page.getByRole('button', { name: 'Entrar' }).waitFor();
+      await page.evaluate(() => document.fonts.ready);
+      await page.locator('#correo').blur();
+      await expect(page).toHaveScreenshot(`app-login-${ancho}-${nombreTema}.png`);
+    });
+  }
+}
+
 const OPCIONES = process.env.VISUAL_ESTRICTO ? { maxDiffPixels: 0, maxDiffPixelRatio: undefined } : {};
 
 async function abrir(page, ruta, { ancho, tema, rol }) {
-  await page.addInitScript((r) => localStorage.setItem('horex:rol-prueba', r), rol);
+  await conSesion(page, rol);
   await page.emulateMedia({ colorScheme: tema });
   await page.setViewportSize({ width: ancho, height: ALTO_BASE });
   await page.goto(ruta);

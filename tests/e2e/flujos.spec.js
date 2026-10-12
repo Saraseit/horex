@@ -1,7 +1,11 @@
 // Flujos de la Fase 1 sobre los datos de prueba de la demo (hoy = 2026-10-10, semana 41).
 import { expect, test } from '@playwright/test';
+import { conSesion } from './ayudas.js';
 
-const comoRol = (page, rol) => page.addInitScript((r) => localStorage.setItem('horex:rol-prueba', r), rol);
+const comoRol = conSesion;
+
+// Por defecto, sesión de supervisor (Mirian). Las pruebas de capturista la reemplazan.
+test.beforeEach(({ page }) => conSesion(page, 'SUPERVISOR'));
 
 /** Presiona Tab hasta que el elemento enfocado cumpla la condición (máximo `limite` veces). */
 async function tabHasta(page, condicion, limite = 15) {
