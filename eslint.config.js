@@ -24,7 +24,7 @@ export default [
   },
   {
     // Node, más el navegador dentro de page.evaluate() de Playwright.
-    files: ['scripts/**', 'tests/**', '*.config.js', 'servidor.js'],
+    files: ['scripts/**', 'tests/**', 'api/**', 'db/**', '*.config.js', 'servidor.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
