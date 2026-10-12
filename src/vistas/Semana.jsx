@@ -1,0 +1,186 @@
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import Alimentos from '../componentes/Alimentos.jsx';
+import Cargando from '../componentes/Cargando.jsx';
+import ConfirmacionEnLinea from '../componentes/ConfirmacionEnLinea.jsx';
+import EncabezadoVista from '../componentes/EncabezadoVista.jsx';
+import FilaKpis from '../componentes/FilaKpis.jsx';
+import Insignia from '../componentes/Insignia.jsx';
+import Kpi from '../componentes/Kpi.jsx';
+import PildoraTipo from '../componentes/PildoraTipo.jsx';
+import Tabla from '../componentes/Tabla.jsx';
+import Tarjeta from '../componentes/Tarjeta.jsx';
+import { useToast } from '../componentes/useToast.js';
+import {
+  useCerrarSemana, useEliminarRegistro, useRegistrosSemana, useSemanasCerradas, useSemanasConDatos,
+} from '../datos/consultas.js';
+import { porDia, porEmpleado, sumar } from '../logica/agregados.js';
+import {
+  DIAS_CORTOS, claveSemana, compararSemanas, desplazarSemana, diasDeSemana, hoy, indiceDia, leerClaveSemana,
+  parseD, rangoSemanaTexto, semanaISO,
+} from '../logica/fechas.js';
+import { fechaLarga, fmtHoras, fmtMoneda, fmtTarifa, nombreCorto, redondear1 } from '../logica/formato.js';
+import { useSesion } from '../sesion/contexto.js';
+
+const DOMINGO = 6;
+
+export default function Semana() {
+  const params = useParams();
+  const actual = semanaISO(hoy());
+  const seleccion = params.anio && params.semana
+    ? { anio: Number(params.anio), semana: Number(params.semana) }
+    : actual;
+  // La key reinicia las confirmaciones pendientes al cambiar de semana.
+  return <ContenidoSemana key={claveSemana(seleccion)} seleccion={seleccion} actual={actual} />;
+}
+
+function ContenidoSemana({ seleccion, actual }) {
+  const navegar = useNavigate();
+  const toast = useToast();
+  const { esSupervisor } = useSesion();
+  const registrosQ = useRegistrosSemana(seleccion);
+  const semanasQ = useSemanasConDatos();
+  const cerradasQ = useSemanasCerradas();
+  const eliminar = useEliminarRegistro();
+  const cerrar = useCerrarSemana();
+  const [confirmarId, setConfirmarId] = useState(null);
+  const [confirmarCierre, setConfirmarCierre] = useState(false);
+
+  const consultas = [registrosQ, semanasQ, cerradasQ];
+  if (consultas.some((q) => q.isPending)) return <Cargando error={consultas.find((q) => q.error)?.error} />;
+
+  const regs = registrosQ.data;
+  const s = sumar(regs);
+  const cerrada = cerradasQ.data.some((c) => c.anio_iso === seleccion.anio && c.semana === seleccion.semana);
+  const opciones = [...new Map([...semanasQ.data, actual, seleccion].map((o) => [claveSemana(o), o])).values()].sort(compararSemanas);
+  const etiquetaSemana = (o) => (o.anio === actual.anio ? `Semana ${o.semana}` : `Semana ${o.semana} · ${o.anio}`);
+  const ir = (o) => navegar(`/semana/${o.anio}/${o.semana}`);
+  const dias = diasDeSemana(seleccion.anio, seleccion.semana);
+  const empleados = porEmpleado(regs).sort((a, b) => a.lista[0].nombre.localeCompare(b.lista[0].nombre, 'es'));
+  const totalesDia = porDia(regs).map((lista) => lista.reduce((h, r) => h + r.horas, 0));
+
+  function cerrarSemana() {
+    cerrar.mutate(seleccion, {
+      onSuccess: () => toast(`Semana ${seleccion.semana} cerrada: queda de solo lectura`),
+      onError: (e) => toast(e.message),
+      onSettled: () => setConfirmarCierre(false),
+    });
+  }
+
+  function eliminarRegistro(id) {
+    eliminar.mutate(id, {
+      onSuccess: () => toast('Registro eliminado'),
+      onError: (e) => toast(e.message),
+      onSettled: () => setConfirmarId(null),
+    });
+  }
+
+  const columnasDias = DIAS_CORTOS.map((d, i) => ({
+    id: `dia-${i}`,
+    encabezado: `${d} ${parseD(dias[i]).getDate()}`,
+    claseEncabezado: i === DOMINGO ? 'ctr sun' : 'ctr',
+    claseCelda: (fila) => {
+      const delDia = fila.lista.filter((r) => indiceDia(r.fecha) === i);
+      return ['day-cell', i === DOMINGO && 'sun', !delDia.length && 'empty'].filter(Boolean).join(' ');
+    },
+    celda: (fila) => {
+      const delDia = fila.lista.filter((r) => indiceDia(r.fecha) === i);
+      const h = delDia.reduce((a, r) => a + r.horas, 0);
+      const comio = delDia.some((r) => r.importe_alimentos > 0);
+      return <>{delDia.length ? (h ? redondear1(h) : '0') : '·'}{comio && <i className="meal" />}</>;
+    },
+  }));
+
+  const columnasMatriz = [
+    {
+      id: 'empleado',
+      encabezado: 'Empleado',
+      celda: (f) => <div className="emp-cell">{nombreCorto(f.lista[0].nombre)}<small>{f.lista[0].puesto} · {f.lista[0].grupo}</small></div>,
+    },
+    ...columnasDias,
+    { id: 'horas', encabezado: 'Horas', tipo: 'num', celda: (f) => fmtHoras(f.horas) },
+    { id: 'he', encabezado: 'Importe HE', tipo: 'num', celda: (f) => fmtMoneda(f.he) },
+    { id: 'alim', encabezado: 'Alim.', tipo: 'num', celda: (f) => fmtMoneda(f.alim) },
+    { id: 'total', encabezado: 'Total', tipo: 'num', celda: (f) => <b>{fmtMoneda(f.total)}</b> },
+  ];
+
+  function accion(r) {
+    if (!esSupervisor) return <span className="faint" title="Solo supervisor">—</span>;
+    if (cerrada) return <span className="faint" title="Semana cerrada">—</span>;
+    if (confirmarId === r.id) {
+      return <ConfirmacionEnLinea alConfirmar={() => eliminarRegistro(r.id)} alCancelar={() => setConfirmarId(null)} ocupado={eliminar.isPending} />;
+    }
+    return <button type="button" className="btn btn-ghost btn-xs" onClick={() => setConfirmarId(r.id)}>Eliminar</button>;
+  }
+
+  const columnasDetalle = [
+    { id: 'fecha', encabezado: 'Fecha', celda: (r) => fechaLarga(r.fecha) },
+    { id: 'empleado', encabezado: 'Empleado', celda: (r) => nombreCorto(r.nombre) },
+    { id: 'tipo', encabezado: 'Tipo', celda: (r) => <PildoraTipo clave={r.tipo_clave} etiqueta={r.tipo_etiqueta} /> },
+    { id: 'horas', encabezado: 'Horas', tipo: 'num', celda: (r) => r.horas || '—' },
+    { id: 'tarifa', encabezado: 'Tarifa', tipo: 'num', celda: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—') },
+    { id: 'importe', encabezado: 'Importe', tipo: 'num', celda: (r) => fmtMoneda(r.importe_he) },
+    { id: 'alim', encabezado: 'Alim.', tipo: 'ctr', celda: (r) => <Alimentos registro={r} /> },
+    { id: 'total', encabezado: 'Total', tipo: 'num', celda: (r) => <b>{fmtMoneda(r.total)}</b> },
+    { id: 'capturo', encabezado: 'Capturó', claseCelda: 'faint', estiloCelda: { fontSize: 12 }, celda: (r) => r.capturado_por_nombre },
+    { id: 'accion', encabezado: '', estiloCelda: { textAlign: 'right' }, celda: accion },
+  ];
+  const detalle = [...regs].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
+
+  let subtituloDetalle = esSupervisor ? 'Como supervisor puedes eliminar registros erróneos' : 'Solo el supervisor puede eliminar registros';
+  if (esSupervisor && cerrada) subtituloDetalle = 'Semana cerrada: ya no se pueden eliminar registros';
+
+  return (
+    <section className="view">
+      <EncabezadoVista
+        titulo={`Semana ${seleccion.semana}`}
+        subtitulo={<>{rangoSemanaTexto(seleccion.anio, seleccion.semana)} {cerrada
+          ? <Insignia variante="grey">Cerrada · pagada</Insignia>
+          : <Insignia variante="ok">Abierta · en captura</Insignia>}</>}
+      >
+        <button type="button" className="btn btn-ghost btn-icon" aria-label="Semana anterior" disabled={compararSemanas(seleccion, opciones[0]) <= 0} onClick={() => ir(desplazarSemana(seleccion, -1))}>‹</button>
+        <select className="select sm" id="sem-select" aria-label="Semana" value={claveSemana(seleccion)} onChange={(e) => ir(leerClaveSemana(e.target.value))}>
+          {opciones.map((o) => <option key={claveSemana(o)} value={claveSemana(o)}>{etiquetaSemana(o)}</option>)}
+        </select>
+        <button type="button" className="btn btn-ghost btn-icon" aria-label="Semana siguiente" disabled={compararSemanas(seleccion, actual) >= 0} onClick={() => ir(desplazarSemana(seleccion, 1))}>›</button>
+        {!cerrada && (confirmarCierre
+          ? <ConfirmacionEnLinea pregunta="¿Cerrar semana?" alConfirmar={cerrarSemana} alCancelar={() => setConfirmarCierre(false)} ocupado={cerrar.isPending} />
+          : (
+            <button type="button" className="btn btn-brand" disabled={!esSupervisor} title={esSupervisor ? undefined : 'Solo supervisor'} onClick={() => setConfirmarCierre(true)}>
+              Cerrar semana
+            </button>
+          ))}
+      </EncabezadoVista>
+
+      <FilaKpis>
+        <Kpi etiqueta="Horas extra" valor={fmtHoras(s.horas)} sub={`${s.registros} registros`} />
+        <Kpi etiqueta="Importe HE" valor={fmtMoneda(s.he)} sub={`${empleados.length} empleados`} />
+        <Kpi etiqueta="Alimentos" valor={fmtMoneda(s.alim)} sub={`${s.comidas} comidas`} />
+        <Kpi etiqueta="Total a pagar" valor={fmtMoneda(s.total)} sub="HE + alimentos" hero />
+      </FilaKpis>
+
+      <Tarjeta titulo="Horas por empleado y día" subtitulo="Punto ámbar = alimentos ese día · Clic en una fila para ver el detalle del empleado" conCuerpo={false}>
+        {empleados.length ? (
+          <Tabla
+            columnas={columnasMatriz}
+            filas={empleados}
+            clave={(f) => f.empleado_id}
+            alClicFila={(f) => navegar(`/reportes/empleado/${f.empleado_id}`)}
+            pie={<>
+              <td>Total semana</td>
+              {totalesDia.map((h, i) => <td key={i} className={i === DOMINGO ? 'day-cell sun' : 'day-cell'}>{h ? redondear1(h) : '·'}</td>)}
+              <td className="num">{fmtHoras(s.horas)}</td>
+              <td className="num">{fmtMoneda(s.he)}</td>
+              <td className="num">{fmtMoneda(s.alim)}</td>
+              <td className="num">{fmtMoneda(s.total)}</td>
+            </>}
+          />
+        ) : <div className="empty-state">Sin registros esta semana</div>}
+      </Tarjeta>
+
+      <Tarjeta titulo="Registros de la semana" subtitulo={subtituloDetalle} conCuerpo={false}>
+        <Tabla columnas={columnasDetalle} filas={detalle} clave={(r) => r.id} />
+      </Tarjeta>
+    </section>
+  );
+}
