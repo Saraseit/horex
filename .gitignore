@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+# Pruebas
+test-results/
+playwright-report/
+coverage/
+
+# Datos de nómina reales: se quedan sólo en esta máquina
+docs/*.xlsx
+docs/importacion/
+
+# Editor / sistema
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

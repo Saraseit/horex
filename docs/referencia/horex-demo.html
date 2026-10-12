@@ -1,0 +1,1085 @@
+<title>Horex — Captura</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+
+<style>
+:root {
+  --bg:#f6f8fb; --surface:#ffffff; --surface-2:#eff3f8; --border:#e1e7ef; --border-focus:#3b6fd4;
+  --fg:#0f1729; --fg-2:#4a5568; --fg-3:#8a97ab;
+  --brand:#1e3a6e; --brand-2:#2a4d8f; --brand-light:#e7eef9; --on-brand:#ffffff;
+  --accent:#d97706; --accent-light:#fef3c7; --accent-hover:#b45309;
+  --ok:#15803d; --ok-light:#dcfce7; --warn:#c62828; --warn-light:#fde8e8; --info:#1d4ed8; --info-light:#e0eaff;
+  --bar:#2a4d8f; --bar-2:#d97706; --track:#e8edf4;
+  --radius-sm:6px; --radius:10px; --radius-lg:14px;
+  --shadow-sm:0 1px 3px rgba(15,23,41,.06),0 1px 2px rgba(15,23,41,.04);
+  --shadow:0 6px 18px rgba(15,23,41,.10),0 1px 3px rgba(15,23,41,.05);
+  --font-ui:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --sidebar-w:228px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0c1018; --surface:#151b27; --surface-2:#1d2533; --border:#2a3446; --border-focus:#5a8dee;
+    --fg:#e8edf5; --fg-2:#a3b0c4; --fg-3:#64728a;
+    --brand:#14284d; --brand-2:#3b6fd4; --brand-light:#1a2a48; --on-brand:#ffffff;
+    --accent:#f59e0b; --accent-light:#33240a; --accent-hover:#fbbf24;
+    --ok:#4ade80; --ok-light:#0d2b19; --warn:#f87171; --warn-light:#2f1212; --info:#93b4ff; --info-light:#16244a;
+    --bar:#5a8dee; --bar-2:#f59e0b; --track:#222c3d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0c1018; --surface:#151b27; --surface-2:#1d2533; --border:#2a3446; --border-focus:#5a8dee;
+  --fg:#e8edf5; --fg-2:#a3b0c4; --fg-3:#64728a;
+  --brand:#14284d; --brand-2:#3b6fd4; --brand-light:#1a2a48; --on-brand:#ffffff;
+  --accent:#f59e0b; --accent-light:#33240a; --accent-hover:#fbbf24;
+  --ok:#4ade80; --ok-light:#0d2b19; --warn:#f87171; --warn-light:#2f1212; --info:#93b4ff; --info-light:#16244a;
+  --bar:#5a8dee; --bar-2:#f59e0b; --track:#222c3d;
+  color-scheme: dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;font-family:var(--font-ui);background:var(--bg);color:var(--fg);font-size:14px;line-height:1.5}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+h2,h3,p{margin:0}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--fg-2)}
+.faint{color:var(--fg-3)}
+
+/* ── Shell ── */
+.app{display:flex;height:100%}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--brand);display:flex;flex-direction:column;padding-bottom:16px;overflow-y:auto}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:6px}
+.logo-mark{font-size:20px;font-weight:700;color:#fff;letter-spacing:-.5px;display:flex;align-items:center;gap:9px}
+.logo-mark span{width:28px;height:28px;background:var(--accent);border-radius:var(--radius-sm);display:grid;place-items:center;font-size:14px;color:#fff}
+.logo-sub{font-size:10.5px;color:rgba(255,255,255,.5);margin-top:3px;letter-spacing:.06em;text-transform:uppercase}
+.nav-section{padding:0 10px;display:flex;flex-direction:column;gap:2px}
+.nav-label{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.38);padding:12px 10px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius-sm);color:rgba(255,255,255,.68);font-size:13.5px;font-weight:500;cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:background .15s,color .15s}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.16);color:#fff}
+.nav-icon{width:18px;text-align:center;font-size:14px}
+.sidebar-footer{margin-top:auto;padding:12px 12px 0;border-top:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:10px}
+.user-chip{display:flex;align-items:center;gap:10px;padding:2px 4px}
+.avatar{width:30px;height:30px;background:var(--accent);border-radius:50%;display:grid;place-items:center;font-size:11.5px;font-weight:700;color:#fff;flex-shrink:0}
+.user-name{font-size:12.5px;font-weight:600;color:rgba(255,255,255,.9)}
+.user-role{font-size:11px;color:rgba(255,255,255,.45)}
+.role-seg{display:grid;grid-template-columns:1fr 1fr;background:rgba(255,255,255,.08);border-radius:var(--radius-sm);padding:3px;gap:3px}
+.role-seg button{border:none;background:none;color:rgba(255,255,255,.6);font-size:11.5px;font-weight:600;padding:6px 4px;border-radius:4px;cursor:pointer}
+.role-seg button.on{background:rgba(255,255,255,.18);color:#fff}
+.role-hint{font-size:10.5px;color:rgba(255,255,255,.4);text-align:center}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:600}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.content{flex:1;overflow-y:auto;padding:24px 28px 40px}
+.view{display:flex;flex-direction:column;gap:20px;max-width:1240px}
+
+/* ── Generic ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);min-width:0}
+.card-header{padding:16px 20px 0;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.card-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card-subtitle{font-size:12.5px;color:var(--fg-2);margin-top:2px}
+.card-body{padding:0 20px 20px}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px;background:var(--brand-light);color:var(--brand-2);white-space:nowrap}
+.badge.warn{background:var(--warn-light);color:var(--warn)}
+.badge.ok{background:var(--ok-light);color:var(--ok)}
+.badge.amber{background:var(--accent-light);color:var(--accent)}
+.badge.grey{background:var(--surface-2);color:var(--fg-2)}
+.semana-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;font-family:var(--font-mono);color:var(--fg-2);white-space:nowrap}
+
+.view-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.view-head h2{font-size:20px;font-weight:700;letter-spacing:-.3px;text-wrap:balance}
+.view-head p{font-size:13px;color:var(--fg-2);margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+.label{font-size:11.5px;font-weight:600;color:var(--fg-2);letter-spacing:.04em;text-transform:uppercase;display:block;margin-bottom:6px}
+.label .required{color:var(--warn);margin-left:2px}
+.field{display:flex;flex-direction:column}
+.input,.select{width:100%;padding:8px 11px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13.5px;color:var(--fg);outline:none;transition:border-color .15s,box-shadow .15s}
+.input:focus,.select:focus{border-color:var(--border-focus);box-shadow:0 0 0 3px rgba(59,111,212,.14)}
+.input:disabled,.select:disabled{opacity:.6;cursor:not-allowed}
+.select{cursor:pointer}
+.input.sm,.select.sm{padding:6px 9px;font-size:13px;width:auto}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:1.5px solid transparent;white-space:nowrap}
+.btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(59,111,212,.28)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--accent-hover)}
+.btn-brand{background:var(--brand-2);color:#fff}
+.btn-brand:hover:not(:disabled){filter:brightness(1.1)}
+.btn-ghost{background:transparent;border-color:var(--border);color:var(--fg-2)}
+.btn-ghost:hover:not(:disabled){border-color:var(--brand-2);color:var(--brand-2);background:var(--brand-light)}
+.btn-danger{background:var(--warn);color:#fff}
+.btn-xs{padding:4px 9px;font-size:12px}
+.btn-icon{width:32px;height:32px;padding:0}
+.btn-block{width:100%;padding:12px}
+
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;gap:2px}
+.seg button{border:none;background:none;padding:5px 11px;border-radius:4px;font-size:12.5px;font-weight:600;color:var(--fg-2);cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--surface);color:var(--fg);box-shadow:var(--shadow-sm)}
+
+.alert{display:flex;align-items:flex-start;gap:10px;padding:10px 13px;border-radius:var(--radius-sm);font-size:12.5px;line-height:1.45}
+.alert.warn{background:var(--warn-light);color:var(--warn)}
+.alert.ok{background:var(--ok-light);color:var(--ok)}
+.alert.info{background:var(--info-light);color:var(--info)}
+.alert.amber{background:var(--accent-light);color:var(--accent)}
+.alert-icon{flex-shrink:0}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow-sm);min-width:0}
+.kpi .k-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-3)}
+.kpi .k-val{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;margin-top:4px;letter-spacing:-.5px}
+.kpi .k-sub{font-size:12px;color:var(--fg-2);margin-top:2px}
+.kpi.hero{background:var(--brand);border-color:var(--brand)}
+.kpi.hero .k-lbl{color:rgba(255,255,255,.6)}
+.kpi.hero .k-val{color:#fff}
+.kpi.hero .k-sub{color:rgba(255,255,255,.7)}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;border-top:1px solid var(--border)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-3);text-align:left;padding:10px 12px;background:var(--surface-2);white-space:nowrap;border-bottom:1px solid var(--border)}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl .num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.tbl th.num{text-align:right}
+.tbl .ctr{text-align:center}
+.tbl tbody tr.clickable{cursor:pointer}
+.tbl tbody tr.clickable:hover td{background:var(--surface-2)}
+.tbl tfoot td{font-weight:700;background:var(--surface-2);border-top:1.5px solid var(--border);border-bottom:none}
+.tbl td:first-child,.tbl th:first-child{padding-left:20px}
+.tbl td:last-child,.tbl th:last-child{padding-right:20px}
+.day-cell{font-family:var(--font-mono);font-variant-numeric:tabular-nums;text-align:center;position:relative}
+.day-cell.empty{color:var(--fg-3)}
+.day-cell .meal{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-left:3px;vertical-align:2px}
+th.sun,td.sun{background:color-mix(in srgb,var(--accent-light) 55%,transparent)}
+.emp-cell{display:flex;flex-direction:column;line-height:1.3}
+.emp-cell small{color:var(--fg-3);font-size:11.5px}
+.tipo-pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--brand-light);color:var(--brand-2)}
+.tipo-pill.especial{background:var(--accent-light);color:var(--accent)}
+.tipo-pill.muerta{background:var(--surface-2);color:var(--fg-2)}
+.tipo-pill.sinhe{background:var(--ok-light);color:var(--ok)}
+.meals{display:inline-flex;gap:3px}
+.meals span{font-size:10.5px;font-weight:700;width:18px;height:18px;border-radius:4px;display:grid;place-items:center;background:var(--accent-light);color:var(--accent)}
+
+/* Charts */
+.vbars{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:14px;align-items:end;height:190px;padding:8px 4px 0}
+.vbar{display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;min-width:0}
+.vbar .v-val{font-family:var(--font-mono);font-size:11.5px;font-weight:600;color:var(--fg-2);white-space:nowrap}
+.vbar .v-col{width:100%;max-width:64px;background:var(--bar);border-radius:5px 5px 0 0;min-height:2px;transition:height .3s}
+.vbar.current .v-col{background:var(--bar-2)}
+.vbar .v-lbl{font-size:11.5px;color:var(--fg-3);font-weight:600;white-space:nowrap}
+.vbars-axis{border-top:1px solid var(--border);margin:0 4px}
+.hbars{display:flex;flex-direction:column;gap:12px}
+.hbar-row{display:grid;grid-template-columns:140px 1fr auto;gap:12px;align-items:center}
+.hbar-row .h-lbl{font-size:13px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar-row .h-track{height:10px;background:var(--track);border-radius:5px;overflow:hidden}
+.hbar-row .h-fill{height:100%;background:var(--bar);border-radius:5px}
+.hbar-row .h-val{font-family:var(--font-mono);font-size:12.5px;font-weight:600;text-align:right;white-space:nowrap}
+.hbar-row .h-val small{color:var(--fg-3);font-weight:500;margin-right:6px}
+.split{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--track)}
+.split div{height:100%}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--fg-2);margin-top:10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+.grid-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.grid-3-1{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:20px}
+
+/* ── Captura ── */
+.capture-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:18px}
+.employee-field{position:relative}
+.employee-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1.5px solid var(--border-focus);border-radius:var(--radius-sm);box-shadow:var(--shadow);z-index:100;max-height:240px;overflow-y:auto}
+.employee-option{padding:9px 13px;cursor:pointer;display:flex;flex-direction:column;gap:1px}
+.employee-option:hover,.employee-option.hl{background:var(--surface-2)}
+.employee-option .emp-name{font-size:13.5px;font-weight:500}
+.employee-option .emp-meta{font-size:11.5px;color:var(--fg-2)}
+.info-strip{background:var(--brand-light);border-radius:var(--radius-sm);padding:10px 14px;display:flex;gap:22px;flex-wrap:wrap}
+.info-item{display:flex;flex-direction:column;gap:1px}
+.info-lbl{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--fg-3)}
+.info-val{font-size:13px;font-weight:600;color:var(--brand-2)}
+.tipo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tipo-btn{padding:10px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--fg-2);font-size:12px;font-weight:500;cursor:pointer;text-align:center;transition:all .15s;line-height:1.3}
+.tipo-btn:hover{border-color:var(--brand-2);color:var(--brand-2);background:var(--brand-light)}
+.tipo-btn.selected{border-color:var(--brand-2);background:var(--brand-light);color:var(--brand-2);font-weight:600}
+.tipo-btn.suggest{border-style:dashed;border-color:var(--accent)}
+.tipo-btn .tipo-tarifa{display:block;font-size:13px;font-weight:700;font-family:var(--font-mono);margin-top:2px;color:var(--accent)}
+.tipo-btn:disabled{opacity:.35;cursor:not-allowed}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.alimentos-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.alimento-toggle{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);cursor:pointer;transition:all .15s;font-size:12px;color:var(--fg-2);font-weight:500;user-select:none}
+.alimento-toggle:hover{border-color:var(--accent)}
+.alimento-toggle.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+.alimento-icon{font-size:19px;line-height:1}
+.alimento-monto{font-family:var(--font-mono);font-size:13px;font-weight:700}
+.resumen-rows{display:flex;flex-direction:column;gap:8px}
+.resumen-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 13px;background:var(--surface-2);border-radius:var(--radius-sm)}
+.resumen-row .r-label{font-size:13px;color:var(--fg-2)}
+.resumen-row .r-value{font-family:var(--font-mono);font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.resumen-row .r-value.txt{font-family:var(--font-ui);font-weight:500;color:var(--fg-2);font-size:13px}
+.resumen-total{display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--brand);border-radius:var(--radius-sm);margin-top:6px}
+.resumen-total .r-label{font-size:13px;color:rgba(255,255,255,.75);font-weight:500}
+.resumen-total .r-value{font-family:var(--font-mono);font-size:19px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+.regla-note{font-size:11.5px;color:var(--accent);margin-top:8px;min-height:1em}
+.hist-list{display:flex;flex-direction:column}
+.hist-item{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.hist-item:last-child{border-bottom:none}
+.hist-dot{width:8px;height:8px;border-radius:50%;background:var(--bar);flex-shrink:0}
+.hist-dot.especial{background:var(--accent)}
+.hist-dot.muerta{background:var(--fg-3)}
+.hist-dot.sinhe{background:var(--ok)}
+.hist-info{flex:1;min-width:0}
+.hist-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-meta{font-size:11.5px;color:var(--fg-2)}
+.hist-monto{font-family:var(--font-mono);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.hist-item.new{animation:flash 1.6s ease}
+@keyframes flash{0%{background:var(--accent-light)}100%{background:transparent}}
+
+/* Switch */
+.switch{position:relative;width:36px;height:20px;border-radius:10px;background:var(--track);border:none;cursor:pointer;transition:background .2s;flex-shrink:0;padding:0}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .2s}
+.switch.on{background:var(--ok)}
+.switch.on::after{left:18px}
+.switch:disabled{opacity:.5;cursor:not-allowed}
+
+.form-panel{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;padding:16px 20px;background:var(--surface-2);border-top:1px solid var(--border)}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;grid-column:1/-1}
+
+.rule-list{display:flex;flex-direction:column}
+.rule{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.rule:last-child{border-bottom:none}
+.rule b{font-family:var(--font-mono);font-weight:600;white-space:nowrap}
+.q-list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--fg-2)}
+.q-list li::marker{color:var(--accent);font-weight:700}
+.tarifa-input{width:90px;text-align:right;font-family:var(--font-mono)}
+
+.empty-state{padding:36px 20px;text-align:center;color:var(--fg-3);font-size:13px}
+.copy-fallback{width:100%;height:120px;margin-top:10px;font-family:var(--font-mono);font-size:11.5px;background:var(--bg);color:var(--fg);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px}
+
+.toast{position:fixed;bottom:24px;right:24px;background:var(--fg);color:var(--bg);padding:11px 18px;border-radius:var(--radius);font-size:13px;font-weight:600;box-shadow:var(--shadow);transform:translateY(90px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);z-index:1000;pointer-events:none;max-width:calc(100vw - 48px)}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ── Responsive ── */
+@media (max-width: 1080px){
+  .capture-grid{grid-template-columns:minmax(0,1fr)}
+  .grid-3-1{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width: 860px){
+  .app{flex-direction:column}
+  .sidebar{width:auto;flex-direction:row;align-items:center;overflow-x:auto;overflow-y:hidden;padding:8px 12px;gap:4px;flex-shrink:0}
+  .sidebar-logo{border:none;padding:0 10px 0 4px;margin:0}
+  .logo-sub,.nav-label,.user-chip,.role-hint{display:none}
+  .nav-section{flex-direction:row;padding:0;gap:2px}
+  .nav-item{width:auto;white-space:nowrap;padding:7px 10px;font-size:13px}
+  .sidebar-footer{margin:0 0 0 6px;padding:0;border:none}
+  .role-seg{width:170px}
+  .topbar{padding:10px 16px}
+  .content{padding:16px 16px 32px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid-2{grid-template-columns:minmax(0,1fr)}
+  .tipo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hbar-row{grid-template-columns:100px 1fr auto}
+  .topbar .btn-ghost{display:none}
+}
+@media (max-width: 480px){
+  .row-2{grid-template-columns:1fr}
+  .kpi .k-val{font-size:18px}
+  .vbars{gap:8px}
+}
+</style>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark"><span>H</span> Horex</div>
+      <div class="logo-sub">Control de horas extra</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Captura</div>
+      <button class="nav-item active" data-action="nav" data-view="registrar"><span class="nav-icon">⏱</span> Registrar HE</button>
+      <button class="nav-item" data-action="nav" data-view="semana"><span class="nav-icon">▦</span> Semana actual</button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Reportes</div>
+      <button class="nav-item" data-action="nav" data-view="empleado"><span class="nav-icon">◉</span> Por empleado</button>
+      <button class="nav-item" data-action="nav" data-view="periodo"><span class="nav-icon">▤</span> Por período</button>
+      <button class="nav-item" data-action="nav" data-view="exportar"><span class="nav-icon">⇩</span> Exportar</button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Catálogos</div>
+      <button class="nav-item" data-action="nav" data-view="empleados"><span class="nav-icon">☰</span> Empleados</button>
+      <button class="nav-item" data-action="nav" data-view="tarifas"><span class="nav-icon">$</span> Tarifas y reglas</button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="avatar" id="u-avatar">MD</div>
+        <div><div class="user-name" id="u-name">Mirian Dzul</div><div class="user-role" id="u-role">Capturista</div></div>
+      </div>
+      <div class="role-seg">
+        <button data-action="role" data-rol="CAPTURISTA" class="on">Capturista</button>
+        <button data-action="role" data-rol="SUPERVISOR">Supervisor</button>
+      </div>
+      <div class="role-hint">Cambia el rol para ver permisos</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-title" id="topbar-title">Registrar horas extra</div>
+      <div class="topbar-right">
+        <span class="semana-tag">Semana 41 · 2026</span>
+        <button class="btn btn-ghost btn-xs" data-action="nav" data-view="semana">Ver semana</button>
+      </div>
+    </header>
+
+    <div class="content" id="content">
+
+      <!-- ═════ REGISTRAR ═════ -->
+      <section class="view" data-viewid="registrar">
+        <div class="capture-grid">
+          <div class="stack">
+            <div class="card">
+              <div class="card-header"><div><div class="card-title">Empleado</div><div class="card-subtitle">Escribe al menos 2 letras del nombre o apellido</div></div></div>
+              <div class="card-body stack" style="gap:14px">
+                <div class="field">
+                  <label class="label" for="emp-search">Empleado <span class="required">*</span></label>
+                  <div class="employee-field">
+                    <input id="emp-search" class="input" type="text" placeholder="Ej. Nah, Cortes, Gamboa…" autocomplete="off">
+                    <div class="employee-dropdown" id="emp-dropdown" hidden></div>
+                  </div>
+                </div>
+                <div class="info-strip" id="emp-info" hidden>
+                  <div class="info-item"><span class="info-lbl">Puesto</span><span class="info-val" id="inf-puesto">—</span></div>
+                  <div class="info-item"><span class="info-lbl">Grupo</span><span class="info-val" id="inf-grupo">—</span></div>
+                  <div class="info-item"><span class="info-lbl">IMSS</span><span class="info-val" id="inf-imss">—</span></div>
+                  <div class="info-item"><span class="info-lbl">Reclutador</span><span class="info-val" id="inf-rec">—</span></div>
+                </div>
+                <div class="alert amber" id="sinhe-alert" hidden><span class="alert-icon">ℹ</span><span id="sinhe-text"></span></div>
+                <div class="alert warn" id="dup-alert" hidden><span class="alert-icon">⚠</span><span id="dup-text"></span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div class="card-title">Horas extra</div></div>
+              <div class="card-body stack" style="gap:16px">
+                <div class="row-2">
+                  <div class="field">
+                    <label class="label" for="num-horas">Horas <span class="required">*</span></label>
+                    <input id="num-horas" class="input mono" type="number" min="0" max="16" step="0.5" placeholder="0.0">
+                  </div>
+                  <div class="field">
+                    <label class="label" for="fecha">Fecha <span class="required">*</span></label>
+                    <input id="fecha" class="input" type="date">
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="label">Tipo de hora <span class="required">*</span></label>
+                  <div class="tipo-grid" id="tipo-grid"></div>
+                </div>
+                <div class="alert info" id="domingo-alert" hidden><span class="alert-icon">◆</span><span>Domingo — día de descanso. Usa <strong>Especial</strong>: $80/hr personal fijo, $70/hr eventual. Horex aplica la tarifa según el grupo.</span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div><div class="card-title">Alimentos</div><div class="card-subtitle">Desayuno si entró a las 6:00 AM o antes · Cena si salió a las 10:00 PM o después</div></div></div>
+              <div class="card-body">
+                <div class="alimentos-grid">
+                  <div class="alimento-toggle" data-meal="desayuno" role="button" tabindex="0"><span class="alimento-icon">☕</span>Desayuno<span class="alimento-monto">$50</span></div>
+                  <div class="alimento-toggle" data-meal="almuerzo" role="button" tabindex="0"><span class="alimento-icon">🥗</span>Almuerzo<span class="alimento-monto">$50</span></div>
+                  <div class="alimento-toggle" data-meal="cena" role="button" tabindex="0"><span class="alimento-icon">🌙</span>Cena<span class="alimento-monto">$50</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="card">
+              <div class="card-header"><div class="card-title">Resumen del registro</div></div>
+              <div class="card-body">
+                <div class="resumen-rows">
+                  <div class="resumen-row"><span class="r-label">Empleado</span><span class="r-value txt" id="res-emp">—</span></div>
+                  <div class="resumen-row"><span class="r-label">Fecha</span><span class="r-value txt" id="res-fecha">—</span></div>
+                  <div class="resumen-row"><span class="r-label">Horas × tarifa</span><span class="r-value" id="res-horas">—</span></div>
+                  <div class="resumen-row"><span class="r-label">Importe HE</span><span class="r-value" id="res-importe">$0</span></div>
+                  <div class="resumen-row"><span class="r-label">Alimentos</span><span class="r-value" id="res-alimentos">$0</span></div>
+                </div>
+                <div class="resumen-total"><span class="r-label">Total registro</span><span class="r-value" id="res-total">$0</span></div>
+                <div class="regla-note" id="regla-note"></div>
+                <button class="btn btn-primary btn-block" id="btn-guardar" disabled style="margin-top:8px">Guardar registro</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><div><div class="card-title">Registros recientes</div><div class="card-subtitle">Últimos capturados</div></div></div>
+              <div class="card-body"><div class="hist-list" id="hist-list"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-viewid="semana" hidden></section>
+      <section class="view" data-viewid="empleado" hidden></section>
+      <section class="view" data-viewid="periodo" hidden></section>
+      <section class="view" data-viewid="exportar" hidden></section>
+      <section class="view" data-viewid="empleados" hidden></section>
+      <section class="view" data-viewid="tarifas" hidden></section>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═════════════ DATOS BASE ═════════════ */
+const HOY = '2026-10-10';
+const SEMANA_ACTUAL = 41;
+const SEMANAS = [38,39,40,41];
+const DIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const MEAL = 50;
+
+const EMPLEADOS = [
+  { id:1, nombre:'Miguel Armando Cortes Pinto',      puesto:'Chofer cargador',             grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:2, nombre:'Cindy Cristina Novelo Villalobos', puesto:'Auxiliar de almacén',          grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:3, nombre:'Jeanine Beatriz Perez Falcon',     puesto:'Encargada de almacén blancos', grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:4, nombre:'Gerardo Jose Itza Poot',           puesto:'Coordinador de Operaciones',   grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:5, nombre:'Yahir Antonio Nah Molina',         puesto:'Operador cargador',            grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:6, nombre:'Erik Alejandro Tzec Chacon',       puesto:'Especialista de mesas',        grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:7, nombre:'Angel Enrique Moo Chale',          puesto:'Operador cargador',            grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:8, nombre:'Antonio Jimenez Morales',          puesto:'Operador cargador',            grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:9, nombre:'Isac Ariel Cante Baak',            puesto:'Auxiliar de compras',          grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:10,nombre:'Armando Andres Guzman Coba',       puesto:'Operador cargador',            grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:11,nombre:'Mirian Noemi Dzul Uc',             puesto:'Encargada de nómina',          grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:12,nombre:'Luis Mauricio Garrido Marmolejo',  puesto:'Operador cargador',            grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:13,nombre:'Eric de Jesus Echeverria Cime',    puesto:'Almacenista',                  grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:14,nombre:'Delmer Adolfo Gamboa Arjona',      puesto:'Chofer cargador',              grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:15,nombre:'Lucas Ivan Salvador Rosario',      puesto:'Chofer cargador',              grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:16,nombre:'Carlos Francisco May Cervantes',   puesto:'Chofer cargador',              grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:17,nombre:'Aldry Rangel Ake Pech',            puesto:'Operador cargador',            grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:18,nombre:'Angel Gabriel Heredia Tun',        puesto:'Operador cargador',            grupo:'P. Fijo',  reclutador:'FIJO',     imss:'NO', activo:true },
+  { id:19,nombre:'Javier Alejandro Miss Dzul',       puesto:'Operador cargador',            grupo:'Eventual', reclutador:'EVENTUAL', imss:'NO', activo:true },
+  { id:20,nombre:'Jesus Ricardo Balam Chacon',       puesto:'Operador cargador',            grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:21,nombre:'Juan Gabriel Chan Itza',           puesto:'Operador cargador',            grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:22,nombre:'Jorge Andres Garcia de Leon',      puesto:'Operador cargador',            grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:true },
+  { id:23,nombre:'Bryan Silveira',                   puesto:'Operador cargador',            grupo:'Eventual', reclutador:'EVENTUAL', imss:'NO', activo:true },
+  { id:24,nombre:'Victor Manuel Garcia',             puesto:'Operador cargador',            grupo:'Eventual', reclutador:'EVENTUAL', imss:'NO', activo:true },
+  { id:25,nombre:'Juan Carlos Benito',               puesto:'Operador cargador',            grupo:'Eventual', reclutador:'EVENTUAL', imss:'NO', activo:true },
+  { id:26,nombre:'Raul Ernesto Pech Canul',          puesto:'Operador cargador',            grupo:'Eventual', reclutador:'EVENTUAL', imss:'NO', activo:false },
+  { id:27,nombre:'Jose Luis Uicab May',              puesto:'Chofer cargador',              grupo:'P. Fijo',  reclutador:'FIJO',     imss:'SI', activo:false },
+];
+
+const TIPOS = {
+  NORMAL_LOCAL:     { label:'Normal local',     tarifa:60, desc:'Entre semana, hasta la hora 10' },
+  NORMAL_FORANEA:   { label:'Normal foránea',   tarifa:60, desc:'Entre semana, servicio fuera de Mérida' },
+  ESPECIAL_LOCAL:   { label:'Especial local',   tarifa:80, desc:'Hora 11 en adelante o domingo' },
+  ESPECIAL_FORANEA: { label:'Especial foránea', tarifa:80, desc:'Hora 11+ o domingo, fuera de Mérida' },
+  MUERTA:           { label:'Muerta',           tarifa:30, desc:'Mitad de la tarifa normal' },
+  MUERTA_ESPECIAL:  { label:'Muerta especial',  tarifa:40, desc:'Mitad de la tarifa especial' },
+};
+const SIN_HE_LABEL = 'Solo alimentos';
+const PUESTOS_SIN_HE = ['coordinador de operaciones','almacenista'];
+const USUARIOS = {
+  CAPTURISTA: { nombre:'Mirian Dzul',  ini:'MD', rol:'Capturista' },
+  SUPERVISOR: { nombre:'Gerardo Itza', ini:'GI', rol:'Supervisor' },
+};
+
+/* ═════════════ HELPERS ═════════════ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
+const fmtH = n => (Math.round(n*10)/10).toLocaleString('es-MX') + ' h';
+const normStr = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+const parseD = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const toISO = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const esDomingo = s => !!s && parseD(s).getDay() === 0;
+const dowIdx = s => (parseD(s).getDay() + 6) % 7; // 0 = lunes
+const corto = n => n.split(' ').slice(0,2).join(' ') + ' ' + (n.split(' ')[2] || '');
+const fechaCorta = s => parseD(s).toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
+const fechaLarga = s => parseD(s).toLocaleDateString('es-MX',{weekday:'short',day:'2-digit',month:'short'});
+function isoWeek(s){
+  const d = parseD(s); const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day);
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(),0,1));
+  return Math.ceil(((t - y0) / 86400000 + 1) / 7);
+}
+function lunesDeSemana(w){ const d = new Date(2025, 11, 29); d.setDate(d.getDate() + (w-1)*7); return d; }
+function rangoSemana(w){
+  const a = lunesDeSemana(w), b = new Date(a); b.setDate(b.getDate()+6);
+  return `${a.getDate()} ${a.toLocaleDateString('es-MX',{month:'short'})} – ${b.getDate()} ${b.toLocaleDateString('es-MX',{month:'short'})} 2026`;
+}
+const generaHE = e => !PUESTOS_SIN_HE.some(p => normStr(e.puesto).includes(p));
+const empById = id => EMPLEADOS.find(e => e.id === id);
+const importeHE = r => r.horas * r.tarifa;
+const alimentosR = r => ((r.desayuno?1:0) + (r.almuerzo?1:0) + (r.cena?1:0)) * MEAL;
+const totalR = r => importeHE(r) + alimentosR(r);
+const tipoLabel = t => t === 'SIN_HE' ? SIN_HE_LABEL : (TIPOS[t]?.label || t);
+const tipoCls = t => t === 'SIN_HE' ? 'sinhe' : t.includes('MUERTA') ? 'muerta' : t.includes('ESPECIAL') ? 'especial' : '';
+function sumar(regs){
+  return regs.reduce((a,r) => { a.horas += r.horas; a.he += importeHE(r); a.alim += alimentosR(r); a.total += totalR(r); return a; }, {horas:0, he:0, alim:0, total:0});
+}
+function tarifaPara(emp, fecha, tipo){
+  let t = TIPOS[tipo].tarifa;
+  if (emp && emp.grupo === 'Eventual' && esDomingo(fecha) && tipo.startsWith('ESPECIAL')) t = 70;
+  return t;
+}
+function mealsHTML(r){
+  const m = [];
+  if (r.desayuno) m.push('<span title="Desayuno">D</span>');
+  if (r.almuerzo) m.push('<span title="Almuerzo">A</span>');
+  if (r.cena) m.push('<span title="Cena">C</span>');
+  return m.length ? `<span class="meals">${m.join('')}</span>` : '<span class="faint">—</span>';
+}
+
+/* ═════════════ DATOS DE PRUEBA (semilla fija) ═════════════ */
+function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const R = mulberry(2026);
+const shuffle = arr => { for (let i = arr.length-1; i > 0; i--) { const j = Math.floor(R()*(i+1)); [arr[i],arr[j]] = [arr[j],arr[i]]; } return arr; };
+const weighted = pairs => { let r = R() * pairs.reduce((s,p) => s+p[1], 0); for (const [k,w] of pairs) { if ((r -= w) <= 0) return k; } return pairs[0][0]; };
+
+let registros = [];
+let nextId = 1;
+function addReg(o){
+  const r = { id: nextId++, semana: isoWeek(o.fecha), desayuno:false, almuerzo:false, cena:false, capturadoPor:'Mirian Dzul', ...o };
+  registros.push(r); return r;
+}
+(function generar(){
+  const oper = EMPLEADOS.filter(e => e.activo && generaHE(e) && !['Encargada de nómina','Auxiliar de compras'].includes(e.puesto));
+  for (let d = new Date(2026, 8, 14); toISO(d) <= HOY; d.setDate(d.getDate()+1)) {
+    const f = toISO(d);
+    if (d.getDay() === 0) {
+      if (R() < 0.6) {
+        shuffle(oper.slice()).slice(0, 2 + Math.floor(R()*3)).forEach(emp => {
+          addReg({ empId:emp.id, fecha:f, tipo:'ESPECIAL_LOCAL', horas:4 + Math.floor(R()*5), tarifa: emp.grupo === 'Eventual' ? 70 : 80, desayuno: R() < .3 });
+        });
+      }
+      continue;
+    }
+    const n = 4 + Math.floor(R()*5);
+    shuffle(oper.slice()).slice(0, n).forEach(emp => {
+      const tipo = weighted([['NORMAL_LOCAL',45],['NORMAL_FORANEA',20],['ESPECIAL_LOCAL',9],['ESPECIAL_FORANEA',5],['MUERTA',15],['MUERTA_ESPECIAL',6]]);
+      let horas = tipo.includes('MUERTA') ? 1 + Math.floor(R()*4) : 1 + Math.floor(R()*6);
+      if (R() < .2) horas += .5;
+      addReg({ empId:emp.id, fecha:f, tipo, horas, tarifa:TIPOS[tipo].tarifa, desayuno: R() < .22, almuerzo: R() < .04, cena: horas >= 4 && R() < .45 });
+    });
+    if (R() < .3) {
+      const emp = empById(R() < .6 ? 4 : 13);
+      const des = R() < .5;
+      addReg({ empId:emp.id, fecha:f, tipo:'SIN_HE', horas:0, tarifa:0, desayuno:des, cena:!des });
+    }
+  }
+})();
+
+/* ═════════════ ESTADO UI ═════════════ */
+const ui = {
+  view:'registrar', rol:'CAPTURISTA',
+  semana: SEMANA_ACTUAL, confirmDel:null,
+  empSel: 5,
+  perDesde:'2026-09-14', perHasta: HOY,
+  expDesde: SEMANA_ACTUAL, expHasta: SEMANA_ACTUAL, expFmt:'resumen', copyFallback:false,
+  empQ:'', empFiltro:'activos', newEmp:false,
+  ultimoId:null,
+};
+const esSup = () => ui.rol === 'SUPERVISOR';
+
+const TITULOS = { registrar:'Registrar horas extra', semana:'Semana actual', empleado:'Reporte por empleado', periodo:'Reporte por período', exportar:'Exportar para nómina', empleados:'Catálogo de empleados', tarifas:'Tarifas y reglas' };
+
+function irA(view){
+  ui.view = view; ui.confirmDel = null;
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  document.querySelectorAll('[data-viewid]').forEach(s => s.hidden = s.dataset.viewid !== view);
+  $('topbar-title').textContent = TITULOS[view];
+  render();
+  $('content').scrollTop = 0;
+}
+function render(){
+  const fn = { registrar: renderCaptura, semana: renderSemana, empleado: renderEmpleado, periodo: renderPeriodo, exportar: renderExportar, empleados: renderEmpleados, tarifas: renderTarifas }[ui.view];
+  fn();
+}
+
+/* ═════════════ CAPTURA ═════════════ */
+let cap = { empleado:null, horas:0, tipo:null, fecha:HOY, desayuno:false, almuerzo:false, cena:false };
+let hlIndex = -1;
+
+function renderTipoGrid(){
+  const dom = esDomingo(cap.fecha);
+  const sinHE = cap.empleado && !generaHE(cap.empleado);
+  $('tipo-grid').innerHTML = Object.entries(TIPOS).map(([k,t]) => {
+    const tar = tarifaPara(cap.empleado, cap.fecha, k);
+    const sug = dom && k.startsWith('ESPECIAL') && !sinHE;
+    return `<button class="tipo-btn ${cap.tipo===k?'selected':''} ${sug?'suggest':''}" data-tipo="${k}" ${sinHE?'disabled':''}>${t.label}<span class="tipo-tarifa">$${tar}/hr</span></button>`;
+  }).join('');
+}
+function renderCaptura(){
+  renderTipoGrid();
+  renderHistorial();
+  actualizarResumen();
+}
+function renderHistorial(){
+  const recent = [...registros].sort((a,b) => b.id - a.id).slice(0, 7);
+  $('hist-list').innerHTML = recent.map(r => {
+    const e = empById(r.empId);
+    return `<div class="hist-item ${r.id===ui.ultimoId?'new':''}">
+      <div class="hist-dot ${tipoCls(r.tipo)}"></div>
+      <div class="hist-info"><div class="hist-name">${esc(corto(e.nombre))}</div>
+      <div class="hist-meta">${tipoLabel(r.tipo)} · ${r.horas ? fmtH(r.horas) + ' · ' : ''}${fechaCorta(r.fecha)}</div></div>
+      <div class="hist-monto">${fmt(totalR(r))}</div></div>`;
+  }).join('');
+}
+function actualizarResumen(){
+  const sinHE = cap.empleado && !generaHE(cap.empleado);
+  const tarifa = (cap.tipo && !sinHE) ? tarifaPara(cap.empleado, cap.fecha, cap.tipo) : 0;
+  const horas = sinHE ? 0 : cap.horas;
+  const imp = horas * tarifa;
+  const ali = ((cap.desayuno?1:0)+(cap.almuerzo?1:0)+(cap.cena?1:0)) * MEAL;
+  $('res-emp').textContent = cap.empleado ? corto(cap.empleado.nombre) : '—';
+  $('res-fecha').textContent = cap.fecha ? fechaLarga(cap.fecha) : '—';
+  $('res-horas').textContent = sinHE ? 'No aplica' : (horas && tarifa) ? `${horas} × $${tarifa}` : '—';
+  $('res-importe').textContent = fmt(imp);
+  $('res-alimentos').textContent = fmt(ali);
+  $('res-total').textContent = fmt(imp + ali);
+  let nota = '';
+  if (cap.empleado && cap.tipo && tarifa === 70) nota = 'Regla aplicada: domingo, personal eventual → $70/hr';
+  else if (cap.tipo && cap.tipo.startsWith('ESPECIAL') && !esDomingo(cap.fecha)) nota = 'Especial entre semana: solo para horas a partir de la 11';
+  $('regla-note').textContent = nota;
+  const dup = cap.empleado && cap.fecha && registros.some(r => r.empId === cap.empleado.id && r.fecha === cap.fecha);
+  $('dup-alert').hidden = !dup;
+  if (dup) $('dup-text').innerHTML = `<strong>${esc(corto(cap.empleado.nombre))}</strong> ya tiene un registro el ${fechaLarga(cap.fecha)}. Revisa en <em>Semana actual</em> antes de guardar.`;
+  const valido = cap.empleado && cap.fecha && (sinHE ? ali > 0 : (cap.horas > 0 && cap.tipo));
+  $('btn-guardar').disabled = !valido;
+}
+const empInput = $('emp-search'), empDrop = $('emp-dropdown');
+empInput.addEventListener('input', () => {
+  const q = normStr(empInput.value.trim());
+  if (cap.empleado && empInput.value !== cap.empleado.nombre) { cap.empleado = null; $('emp-info').hidden = true; $('sinhe-alert').hidden = true; renderTipoGrid(); actualizarResumen(); }
+  if (q.length < 2) { empDrop.hidden = true; return; }
+  const terms = q.split(/\s+/);
+  const matches = EMPLEADOS.filter(e => e.activo && terms.every(t => normStr(e.nombre).includes(t))).slice(0, 8);
+  hlIndex = matches.length ? 0 : -1;
+  empDrop.innerHTML = matches.length ? matches.map((e,i) => `<div class="employee-option ${i===0?'hl':''}" data-id="${e.id}"><span class="emp-name">${esc(e.nombre)}</span><span class="emp-meta">${esc(e.puesto)} · ${e.grupo}</span></div>`).join('') : '<div class="employee-option"><span class="emp-meta">Sin coincidencias entre empleados activos</span></div>';
+  empDrop.hidden = false;
+});
+empInput.addEventListener('keydown', e => {
+  const opts = [...empDrop.querySelectorAll('.employee-option[data-id]')];
+  if (empDrop.hidden || !opts.length) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    hlIndex = (hlIndex + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length;
+    opts.forEach((o,i) => o.classList.toggle('hl', i === hlIndex));
+  } else if (e.key === 'Enter' && hlIndex >= 0) {
+    e.preventDefault(); seleccionarEmpleado(empById(+opts[hlIndex].dataset.id));
+  } else if (e.key === 'Escape') empDrop.hidden = true;
+});
+empDrop.addEventListener('click', e => { const o = e.target.closest('[data-id]'); if (o) seleccionarEmpleado(empById(+o.dataset.id)); });
+document.addEventListener('click', e => { if (!e.target.closest('.employee-field')) empDrop.hidden = true; });
+
+function seleccionarEmpleado(emp){
+  cap.empleado = emp; empInput.value = emp.nombre; empDrop.hidden = true;
+  $('inf-puesto').textContent = emp.puesto; $('inf-grupo').textContent = emp.grupo;
+  $('inf-imss').textContent = emp.imss; $('inf-rec').textContent = emp.reclutador;
+  $('emp-info').hidden = false;
+  const sinHE = !generaHE(emp);
+  $('sinhe-alert').hidden = !sinHE;
+  if (sinHE) { $('sinhe-text').innerHTML = `<strong>${esc(emp.puesto)}</strong> no genera horas extra. Solo registra desayuno o cena si aplica.`; cap.tipo = null; $('num-horas').value = ''; cap.horas = 0; }
+  $('num-horas').disabled = sinHE;
+  renderTipoGrid(); actualizarResumen();
+  if (!sinHE) $('num-horas').focus();
+}
+const fechaInput = $('fecha');
+fechaInput.max = HOY; fechaInput.value = HOY;
+fechaInput.addEventListener('change', () => { cap.fecha = fechaInput.value; $('domingo-alert').hidden = !esDomingo(cap.fecha); renderTipoGrid(); actualizarResumen(); });
+$('tipo-grid').addEventListener('click', e => { const b = e.target.closest('.tipo-btn'); if (!b || b.disabled) return; cap.tipo = b.dataset.tipo; renderTipoGrid(); actualizarResumen(); });
+$('num-horas').addEventListener('input', e => { cap.horas = parseFloat(e.target.value) || 0; actualizarResumen(); });
+document.querySelectorAll('.alimento-toggle').forEach(t => {
+  const toggle = () => { const m = t.dataset.meal; cap[m] = !cap[m]; t.classList.toggle('active', cap[m]); actualizarResumen(); };
+  t.addEventListener('click', toggle);
+  t.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); } });
+});
+$('btn-guardar').addEventListener('click', () => {
+  const emp = cap.empleado, sinHE = !generaHE(emp);
+  const r = addReg({ empId:emp.id, fecha:cap.fecha, tipo: sinHE ? 'SIN_HE' : cap.tipo, horas: sinHE ? 0 : cap.horas, tarifa: sinHE ? 0 : tarifaPara(emp, cap.fecha, cap.tipo), desayuno:cap.desayuno, almuerzo:cap.almuerzo, cena:cap.cena, capturadoPor: USUARIOS[ui.rol].nombre });
+  ui.ultimoId = r.id;
+  toast(`Guardado: ${corto(emp.nombre)} · ${fmt(totalR(r))}`);
+  cap = { empleado:null, horas:0, tipo:null, fecha:cap.fecha, desayuno:false, almuerzo:false, cena:false };
+  empInput.value = ''; $('emp-info').hidden = true; $('sinhe-alert').hidden = true; $('num-horas').value = ''; $('num-horas').disabled = false;
+  document.querySelectorAll('.alimento-toggle').forEach(t => t.classList.remove('active'));
+  renderCaptura(); empInput.focus();
+});
+
+/* ═════════════ SEMANA ═════════════ */
+function renderSemana(){
+  const w = ui.semana, regs = registros.filter(r => r.semana === w);
+  const s = sumar(regs);
+  const emps = [...new Set(regs.map(r => r.empId))].map(empById).sort((a,b) => a.nombre.localeCompare(b.nombre));
+  const lunes = lunesDeSemana(w);
+  const fechasDia = DIAS.map((_,i) => { const d = new Date(lunes); d.setDate(d.getDate()+i); return d.getDate(); });
+  const abierta = w === SEMANA_ACTUAL;
+  const filas = emps.map(e => {
+    const er = regs.filter(r => r.empId === e.id), es = sumar(er);
+    const celdas = DIAS.map((_,i) => {
+      const dr = er.filter(r => dowIdx(r.fecha) === i);
+      const h = dr.reduce((a,r) => a + r.horas, 0), m = dr.some(r => alimentosR(r) > 0);
+      return `<td class="day-cell ${i===6?'sun':''} ${!dr.length?'empty':''}">${dr.length ? (h ? (Math.round(h*10)/10) : '0') : '·'}${m?'<i class="meal"></i>':''}</td>`;
+    }).join('');
+    return `<tr class="clickable" data-action="goto-emp" data-emp="${e.id}"><td><div class="emp-cell">${esc(corto(e.nombre))}<small>${esc(e.puesto)} · ${e.grupo}</small></div></td>${celdas}<td class="num">${fmtH(es.horas)}</td><td class="num">${fmt(es.he)}</td><td class="num">${fmt(es.alim)}</td><td class="num"><b>${fmt(es.total)}</b></td></tr>`;
+  }).join('');
+  const totDia = DIAS.map((_,i) => { const h = regs.filter(r => dowIdx(r.fecha) === i).reduce((a,r) => a + r.horas, 0); return `<td class="day-cell ${i===6?'sun':''}">${h ? Math.round(h*10)/10 : '·'}</td>`; }).join('');
+
+  const detalle = [...regs].sort((a,b) => b.fecha.localeCompare(a.fecha) || b.id - a.id).map(r => {
+    const e = empById(r.empId);
+    let acc;
+    if (!esSup()) acc = '<span class="faint" title="Solo supervisor">—</span>';
+    else if (ui.confirmDel === r.id) acc = `<span class="toolbar" style="justify-content:flex-end"><span style="font-size:12px" class="muted">¿Eliminar?</span><button class="btn btn-danger btn-xs" data-action="del-yes" data-id="${r.id}">Sí</button><button class="btn btn-ghost btn-xs" data-action="del-no">No</button></span>`;
+    else acc = `<button class="btn btn-ghost btn-xs" data-action="del-ask" data-id="${r.id}">Eliminar</button>`;
+    return `<tr><td>${fechaLarga(r.fecha)}</td><td>${esc(corto(e.nombre))}</td><td><span class="tipo-pill ${tipoCls(r.tipo)}">${tipoLabel(r.tipo)}</span></td><td class="num">${r.horas || '—'}</td><td class="num">${r.tarifa ? '$'+r.tarifa : '—'}</td><td class="num">${fmt(importeHE(r))}</td><td class="ctr">${mealsHTML(r)}</td><td class="num"><b>${fmt(totalR(r))}</b></td><td class="faint" style="font-size:12px">${esc(r.capturadoPor)}</td><td style="text-align:right">${acc}</td></tr>`;
+  }).join('');
+
+  document.querySelector('[data-viewid="semana"]').innerHTML = `
+    <div class="view-head">
+      <div><h2>Semana ${w}</h2><p>${rangoSemana(w)} ${abierta ? '<span class="badge ok">Abierta · en captura</span>' : '<span class="badge grey">Cerrada · pagada</span>'}</p></div>
+      <div class="toolbar">
+        <button class="btn btn-ghost btn-icon" data-action="week-prev" ${w<=SEMANAS[0]?'disabled':''} aria-label="Semana anterior">‹</button>
+        <select class="select sm" id="sem-select">${SEMANAS.map(x => `<option value="${x}" ${x===w?'selected':''}>Semana ${x}</option>`).join('')}</select>
+        <button class="btn btn-ghost btn-icon" data-action="week-next" ${w>=SEMANA_ACTUAL?'disabled':''} aria-label="Semana siguiente">›</button>
+        ${abierta ? `<button class="btn btn-brand" data-action="close-week" ${esSup()?'':'disabled title="Solo supervisor"'}>Cerrar semana</button>` : ''}
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="k-lbl">Horas extra</div><div class="k-val">${fmtH(s.horas)}</div><div class="k-sub">${regs.length} registros</div></div>
+      <div class="kpi"><div class="k-lbl">Importe HE</div><div class="k-val">${fmt(s.he)}</div><div class="k-sub">${emps.length} empleados</div></div>
+      <div class="kpi"><div class="k-lbl">Alimentos</div><div class="k-val">${fmt(s.alim)}</div><div class="k-sub">${s.alim/MEAL} comidas</div></div>
+      <div class="kpi hero"><div class="k-lbl">Total a pagar</div><div class="k-val">${fmt(s.total)}</div><div class="k-sub">HE + alimentos</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Horas por empleado y día</div><div class="card-subtitle">Punto ámbar = alimentos ese día · Clic en una fila para ver el detalle del empleado</div></div></div>
+      ${emps.length ? `<div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Empleado</th>${DIAS.map((d,i) => `<th class="ctr ${i===6?'sun':''}">${d} ${fechasDia[i]}</th>`).join('')}<th class="num">Horas</th><th class="num">Importe HE</th><th class="num">Alim.</th><th class="num">Total</th></tr></thead>
+        <tbody>${filas}</tbody>
+        <tfoot><tr><td>Total semana</td>${totDia}<td class="num">${fmtH(s.horas)}</td><td class="num">${fmt(s.he)}</td><td class="num">${fmt(s.alim)}</td><td class="num">${fmt(s.total)}</td></tr></tfoot>
+      </table></div>` : '<div class="empty-state">Sin registros esta semana</div>'}
+    </div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Registros de la semana</div><div class="card-subtitle">${esSup() ? 'Como supervisor puedes eliminar registros erróneos' : 'Solo el supervisor puede eliminar registros'}</div></div></div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Fecha</th><th>Empleado</th><th>Tipo</th><th class="num">Horas</th><th class="num">Tarifa</th><th class="num">Importe</th><th class="ctr">Alim.</th><th class="num">Total</th><th>Capturó</th><th></th></tr></thead>
+        <tbody>${detalle}</tbody>
+      </table></div>
+    </div>`;
+  $('sem-select').onchange = e => { ui.semana = +e.target.value; renderSemana(); };
+}
+
+/* ═════════════ POR EMPLEADO ═════════════ */
+function vbarsHTML(items, fmtFn){
+  const max = Math.max(1, ...items.map(i => i.v));
+  return `<div class="vbars">${items.map(i => `<div class="vbar ${i.cur?'current':''}"><span class="v-val">${fmtFn(i.v)}</span><div class="v-col" style="height:${Math.max(1, i.v/max*140)}px"></div><span class="v-lbl">${i.l}</span></div>`).join('')}</div><div class="vbars-axis"></div>`;
+}
+function renderEmpleado(){
+  const conReg = [...new Set(registros.map(r => r.empId))].map(empById).sort((a,b) => a.nombre.localeCompare(b.nombre));
+  if (!conReg.some(e => e.id === ui.empSel)) ui.empSel = conReg[0].id;
+  const e = empById(ui.empSel);
+  const regs = registros.filter(r => r.empId === e.id).sort((a,b) => b.fecha.localeCompare(a.fecha));
+  const s = sumar(regs);
+  const porSem = SEMANAS.map(w => ({ l:'Sem '+w, v: sumar(regs.filter(r => r.semana === w)).total, cur: w === SEMANA_ACTUAL }));
+  const porTipo = {}; regs.forEach(r => { porTipo[r.tipo] = (porTipo[r.tipo]||0) + r.horas; });
+  const maxT = Math.max(1, ...Object.values(porTipo));
+  const domingos = regs.filter(r => esDomingo(r.fecha)).length;
+
+  document.querySelector('[data-viewid="empleado"]').innerHTML = `
+    <div class="view-head">
+      <div><h2>${esc(e.nombre)}</h2><p>${esc(e.puesto)} <span class="badge ${e.grupo==='Eventual'?'amber':''}">${e.grupo}</span> <span class="badge grey">IMSS: ${e.imss}</span> ${generaHE(e)?'':'<span class="badge ok">Solo alimentos</span>'}</p></div>
+      <div class="toolbar"><select class="select sm" id="emp-sel">${conReg.map(x => `<option value="${x.id}" ${x.id===e.id?'selected':''}>${esc(x.nombre)}</option>`).join('')}</select></div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="k-lbl">Horas extra</div><div class="k-val">${fmtH(s.horas)}</div><div class="k-sub">Semanas 38–41</div></div>
+      <div class="kpi"><div class="k-lbl">Importe HE</div><div class="k-val">${fmt(s.he)}</div><div class="k-sub">${regs.length} registros</div></div>
+      <div class="kpi"><div class="k-lbl">Promedio semanal</div><div class="k-val">${fmt(s.total/SEMANAS.length)}</div><div class="k-sub">${domingos} domingos trabajados</div></div>
+      <div class="kpi hero"><div class="k-lbl">Total acumulado</div><div class="k-val">${fmt(s.total)}</div><div class="k-sub">Alimentos ${fmt(s.alim)}</div></div>
+    </div>
+    <div class="grid-3-1">
+      <div class="card"><div class="card-header"><div><div class="card-title">Total por semana</div><div class="card-subtitle">HE + alimentos · semana actual en ámbar</div></div></div><div class="card-body">${vbarsHTML(porSem, fmt)}</div></div>
+      <div class="card"><div class="card-header"><div class="card-title">Horas por tipo</div></div><div class="card-body"><div class="hbars">${Object.entries(porTipo).filter(([,h]) => h > 0).sort((a,b) => b[1]-a[1]).map(([t,h]) => `<div class="hbar-row" style="grid-template-columns:110px 1fr auto"><span class="h-lbl">${tipoLabel(t)}</span><div class="h-track"><div class="h-fill" style="width:${h/maxT*100}%"></div></div><span class="h-val">${fmtH(h)}</span></div>`).join('') || '<div class="faint">Sin horas extra (solo alimentos)</div>'}</div></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Historial de registros</div></div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Sem.</th><th>Fecha</th><th>Tipo</th><th class="num">Horas</th><th class="num">Tarifa</th><th class="num">Importe HE</th><th class="ctr">Alim.</th><th class="num">Total</th></tr></thead>
+        <tbody>${regs.map(r => `<tr><td class="mono faint">${r.semana}</td><td>${fechaLarga(r.fecha)}</td><td><span class="tipo-pill ${tipoCls(r.tipo)}">${tipoLabel(r.tipo)}</span></td><td class="num">${r.horas||'—'}</td><td class="num">${r.tarifa?'$'+r.tarifa:'—'}</td><td class="num">${fmt(importeHE(r))}</td><td class="ctr">${mealsHTML(r)}</td><td class="num"><b>${fmt(totalR(r))}</b></td></tr>`).join('')}</tbody>
+        <tfoot><tr><td colspan="3">Total</td><td class="num">${fmtH(s.horas)}</td><td></td><td class="num">${fmt(s.he)}</td><td class="num">${fmt(s.alim)}</td><td class="num">${fmt(s.total)}</td></tr></tfoot>
+      </table></div>
+    </div>`;
+  $('emp-sel').onchange = ev => { ui.empSel = +ev.target.value; renderEmpleado(); };
+}
+
+/* ═════════════ POR PERÍODO ═════════════ */
+function renderPeriodo(){
+  const regs = registros.filter(r => r.fecha >= ui.perDesde && r.fecha <= ui.perHasta);
+  const s = sumar(regs);
+  const semanas = [...new Set(regs.map(r => r.semana))].sort((a,b) => a-b);
+  const porSem = semanas.map(w => ({ l:'Sem '+w, v: sumar(regs.filter(r => r.semana === w)).total, cur: w === SEMANA_ACTUAL }));
+  const tipos = [...Object.keys(TIPOS), 'SIN_HE'].map(t => { const tr = regs.filter(r => r.tipo === t); const x = sumar(tr); return { t, n:tr.length, ...x }; }).filter(x => x.n);
+  const maxTipo = Math.max(1, ...tipos.map(x => x.total));
+  const fijo = sumar(regs.filter(r => empById(r.empId).grupo !== 'Eventual')), even = sumar(regs.filter(r => empById(r.empId).grupo === 'Eventual'));
+  const pf = s.total ? fijo.total / s.total * 100 : 0;
+  const dom = sumar(regs.filter(r => esDomingo(r.fecha)));
+  const top = [...new Set(regs.map(r => r.empId))].map(id => ({ e: empById(id), ...sumar(regs.filter(r => r.empId === id)) })).sort((a,b) => b.total - a.total).slice(0, 10);
+  const quick = [['sem','Semana actual','2026-10-05',HOY],['4sem','Últimas 4 semanas','2026-09-14',HOY],['sep','Septiembre','2026-09-01','2026-09-30'],['oct','Octubre','2026-10-01',HOY]];
+
+  document.querySelector('[data-viewid="periodo"]').innerHTML = `
+    <div class="view-head">
+      <div><h2>Reporte por período</h2><p>${fechaCorta(ui.perDesde)} – ${fechaCorta(ui.perHasta)} 2026 · ${semanas.length} semana${semanas.length===1?'':'s'}</p></div>
+      <div class="toolbar">
+        <div class="seg">${quick.map(([k,l,a,b]) => `<button data-action="per-quick" data-a="${a}" data-b="${b}" class="${ui.perDesde===a&&ui.perHasta===b?'on':''}">${l}</button>`).join('')}</div>
+        <input type="date" class="input sm" id="per-desde" value="${ui.perDesde}" max="${HOY}">
+        <span class="faint">a</span>
+        <input type="date" class="input sm" id="per-hasta" value="${ui.perHasta}" max="${HOY}">
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="k-lbl">Horas extra</div><div class="k-val">${fmtH(s.horas)}</div><div class="k-sub">${regs.length} registros</div></div>
+      <div class="kpi"><div class="k-lbl">Importe HE</div><div class="k-val">${fmt(s.he)}</div><div class="k-sub">Tarifa promedio ${s.horas ? fmt(s.he/s.horas) : '—'}/h</div></div>
+      <div class="kpi"><div class="k-lbl">Alimentos</div><div class="k-val">${fmt(s.alim)}</div><div class="k-sub">${s.alim/MEAL} comidas</div></div>
+      <div class="kpi hero"><div class="k-lbl">Total del período</div><div class="k-val">${fmt(s.total)}</div><div class="k-sub">Domingos: ${fmt(dom.total)}</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-header"><div><div class="card-title">Total por semana</div><div class="card-subtitle">HE + alimentos</div></div></div><div class="card-body">${porSem.length ? vbarsHTML(porSem, fmt) : '<div class="empty-state">Sin datos</div>'}</div></div>
+      <div class="card"><div class="card-header"><div><div class="card-title">Personal fijo vs eventual</div><div class="card-subtitle">Participación en el total</div></div></div><div class="card-body">
+        <div class="split"><div style="width:${pf}%;background:var(--bar)"></div><div style="width:${100-pf}%;background:var(--bar-2)"></div></div>
+        <div class="legend"><span><i style="background:var(--bar)"></i>P. Fijo · <b class="mono">${fmt(fijo.total)}</b> (${pf.toFixed(0)}%)</span><span><i style="background:var(--bar-2)"></i>Eventual · <b class="mono">${fmt(even.total)}</b> (${(100-pf).toFixed(0)}%)</span></div>
+        <div class="rule-list" style="margin-top:14px">
+          <div class="rule"><span>Horas personal fijo</span><b>${fmtH(fijo.horas)}</b></div>
+          <div class="rule"><span>Horas personal eventual</span><b>${fmtH(even.horas)}</b></div>
+          <div class="rule"><span>Horas en domingo</span><b>${fmtH(dom.horas)}</b></div>
+        </div>
+      </div></div>
+    </div>
+    <div class="card"><div class="card-header"><div><div class="card-title">Desglose por tipo de hora</div><div class="card-subtitle">Total por tipo (HE + alimentos del registro)</div></div></div><div class="card-body"><div class="hbars">
+      ${tipos.sort((a,b) => b.total-a.total).map(x => `<div class="hbar-row"><span class="h-lbl">${tipoLabel(x.t)}</span><div class="h-track"><div class="h-fill" style="width:${x.total/maxTipo*100}%"></div></div><span class="h-val"><small>${x.horas ? fmtH(x.horas) : x.n+' reg.'}</small>${fmt(x.total)}</span></div>`).join('')}
+    </div></div></div>
+    <div class="card"><div class="card-header"><div><div class="card-title">Top 10 empleados del período</div><div class="card-subtitle">Ordenado por total a pagar · clic para ver detalle</div></div></div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>#</th><th>Empleado</th><th>Grupo</th><th class="num">Horas</th><th class="num">Importe HE</th><th class="num">Alimentos</th><th class="num">Total</th></tr></thead>
+        <tbody>${top.map((t,i) => `<tr class="clickable" data-action="goto-emp" data-emp="${t.e.id}"><td class="mono faint">${i+1}</td><td>${esc(corto(t.e.nombre))}</td><td>${t.e.grupo}</td><td class="num">${fmtH(t.horas)}</td><td class="num">${fmt(t.he)}</td><td class="num">${fmt(t.alim)}</td><td class="num"><b>${fmt(t.total)}</b></td></tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  $('per-desde').onchange = e => { ui.perDesde = e.target.value; if (ui.perDesde > ui.perHasta) ui.perHasta = ui.perDesde; renderPeriodo(); };
+  $('per-hasta').onchange = e => { ui.perHasta = e.target.value; if (ui.perHasta < ui.perDesde) ui.perDesde = ui.perHasta; renderPeriodo(); };
+}
+
+/* ═════════════ EXPORTAR ═════════════ */
+function datosExport(){
+  const regs = registros.filter(r => r.semana >= ui.expDesde && r.semana <= ui.expHasta);
+  if (ui.expFmt === 'resumen') {
+    const head = ['Nombre','IMSS','Grupo','Reclutador','Horas','Importe HE','Desayunos','Almuerzos','Cenas','$ Alimentos','Total'];
+    const rows = [...new Set(regs.map(r => r.empId))].map(empById).sort((a,b) => a.nombre.localeCompare(b.nombre)).map(e => {
+      const er = regs.filter(r => r.empId === e.id), s = sumar(er);
+      return [e.nombre, e.imss, e.grupo, e.reclutador, s.horas, s.he, er.filter(r=>r.desayuno).length, er.filter(r=>r.almuerzo).length, er.filter(r=>r.cena).length, s.alim, s.total];
+    });
+    const s = sumar(regs);
+    return { head, rows, foot:['TOTAL','','','', s.horas, s.he, regs.filter(r=>r.desayuno).length, regs.filter(r=>r.almuerzo).length, regs.filter(r=>r.cena).length, s.alim, s.total], money:[5,9,10], numIdx:[4,5,6,7,8,9,10] };
+  }
+  const head = ['Nombre','Puesto','Grupo','Reclutador','IMSS','Tipo hora','Semana','Fecha','Horas','Valor hora','Importe horas','Desayuno','Almuerzo','Cena','$ Alimentos'];
+  const rows = [...regs].sort((a,b) => a.fecha.localeCompare(b.fecha) || a.id-b.id).map(r => { const e = empById(r.empId); return [e.nombre, e.puesto, e.grupo, e.reclutador, e.imss, tipoLabel(r.tipo).toUpperCase(), r.semana, r.fecha, r.horas, r.tarifa, importeHE(r), r.desayuno?MEAL:0, r.almuerzo?MEAL:0, r.cena?MEAL:0, alimentosR(r)]; });
+  return { head, rows, foot:null, money:[9,10,11,12,13,14], numIdx:[6,8,9,10,11,12,13,14] };
+}
+function renderExportar(){
+  const d = datosExport();
+  const cell = (v,i) => d.numIdx.includes(i) ? `<td class="num">${d.money.includes(i) ? fmt(v) : v}</td>` : `<td>${esc(v)}</td>`;
+  const preview = d.rows.slice(0, 40);
+  document.querySelector('[data-viewid="exportar"]').innerHTML = `
+    <div class="view-head">
+      <div><h2>Exportar para nómina</h2><p>Genera la tabla que hoy se arma a mano en la hoja REPORTE</p></div>
+    </div>
+    <div class="card"><div class="card-body" style="padding-top:18px">
+      <div class="toolbar" style="gap:16px;align-items:flex-end">
+        <div class="field"><span class="label">Desde</span><select class="select sm" id="exp-desde">${SEMANAS.map(w => `<option value="${w}" ${w===ui.expDesde?'selected':''}>Semana ${w}</option>`).join('')}</select></div>
+        <div class="field"><span class="label">Hasta</span><select class="select sm" id="exp-hasta">${SEMANAS.map(w => `<option value="${w}" ${w===ui.expHasta?'selected':''}>Semana ${w}</option>`).join('')}</select></div>
+        <div class="field"><span class="label">Formato</span><div class="seg"><button data-action="exp-fmt" data-fmt="resumen" class="${ui.expFmt==='resumen'?'on':''}">Resumen por empleado</button><button data-action="exp-fmt" data-fmt="detalle" class="${ui.expFmt==='detalle'?'on':''}">Detalle (formato DATABASE)</button></div></div>
+        <div style="margin-left:auto" class="toolbar">
+          <button class="btn btn-primary" data-action="copy-export">Copiar tabla para Excel</button>
+        </div>
+      </div>
+      <div class="alert info" style="margin-top:14px"><span class="alert-icon">ℹ</span><span>En esta demo, el botón copia la tabla al portapapeles para pegarla en Excel o Sheets. En la app final habrá descarga directa en .xlsx y .csv.</span></div>
+      ${ui.copyFallback ? `<textarea class="copy-fallback" id="copy-fb" readonly></textarea><div class="faint" style="font-size:12px;margin-top:4px">El portapapeles no está disponible aquí: selecciona el texto y cópialo con Ctrl+C.</div>` : ''}
+    </div></div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Vista previa</div><div class="card-subtitle">${d.rows.length} fila${d.rows.length===1?'':'s'}${d.rows.length > preview.length ? ` · mostrando las primeras ${preview.length}` : ''} · Semanas ${ui.expDesde}${ui.expHasta!==ui.expDesde?'–'+ui.expHasta:''}</div></div></div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr>${d.head.map((h,i) => `<th class="${d.numIdx.includes(i)?'num':''}">${h}</th>`).join('')}</tr></thead>
+        <tbody>${preview.map(r => `<tr>${r.map(cell).join('')}</tr>`).join('')}</tbody>
+        ${d.foot ? `<tfoot><tr>${d.foot.map((v,i) => v === '' ? '<td></td>' : cell(v,i)).join('')}</tr></tfoot>` : ''}
+      </table></div>
+    </div>`;
+  if (ui.copyFallback) { const ta = $('copy-fb'); ta.value = tsv(d); ta.focus(); ta.select(); }
+  $('exp-desde').onchange = e => { ui.expDesde = +e.target.value; if (ui.expHasta < ui.expDesde) ui.expHasta = ui.expDesde; ui.copyFallback = false; renderExportar(); };
+  $('exp-hasta').onchange = e => { ui.expHasta = +e.target.value; if (ui.expDesde > ui.expHasta) ui.expDesde = ui.expHasta; ui.copyFallback = false; renderExportar(); };
+}
+const tsv = d => [d.head, ...d.rows, ...(d.foot ? [d.foot] : [])].map(r => r.join('\t')).join('\n');
+
+/* ═════════════ EMPLEADOS ═════════════ */
+function renderEmpleados(){
+  const q = normStr(ui.empQ);
+  const lista = EMPLEADOS.filter(e => (ui.empFiltro === 'todos' || (ui.empFiltro === 'activos') === e.activo) && (!q || normStr(e.nombre + ' ' + e.puesto).includes(q))).sort((a,b) => a.nombre.localeCompare(b.nombre));
+  const act = EMPLEADOS.filter(e => e.activo).length;
+  const puestos = [...new Set(EMPLEADOS.map(e => e.puesto))].sort();
+  const sup = esSup();
+  const sec = document.querySelector('[data-viewid="empleados"]');
+  sec.innerHTML = `
+    <div class="view-head">
+      <div><h2>Catálogo de empleados</h2><p>${act} activos · ${EMPLEADOS.length - act} inactivos · ${EMPLEADOS.filter(e=>e.activo&&e.grupo==='Eventual').length} eventuales</p></div>
+      <div class="toolbar">
+        <input class="input sm" id="emp-q" placeholder="Buscar nombre o puesto…" value="${esc(ui.empQ)}" style="width:220px">
+        <div class="seg">${[['activos','Activos'],['inactivos','Inactivos'],['todos','Todos']].map(([k,l]) => `<button data-action="emp-filtro" data-f="${k}" class="${ui.empFiltro===k?'on':''}">${l}</button>`).join('')}</div>
+        <button class="btn btn-primary" data-action="new-emp" ${sup?'':'disabled title="Solo supervisor"'}>+ Nuevo empleado</button>
+      </div>
+    </div>
+    ${!sup ? '<div class="alert amber"><span class="alert-icon">🔒</span><span>Estás como <strong>Capturista</strong>: puedes consultar el catálogo, pero dar de alta o desactivar empleados es solo del supervisor.</span></div>' : ''}
+    <div class="card">
+      ${ui.newEmp ? `<form class="form-panel" id="new-emp-form" style="border-top:none;border-radius:var(--radius-lg) var(--radius-lg) 0 0">
+        <div class="field" style="grid-column:span 2"><label class="label" for="ne-nombre">Nombre completo <span class="required">*</span></label><input class="input" id="ne-nombre" required placeholder="Nombre(s) y apellidos"></div>
+        <div class="field"><label class="label" for="ne-puesto">Puesto</label><select class="select" id="ne-puesto">${puestos.map(p => `<option ${p==='Operador cargador'?'selected':''}>${esc(p)}</option>`).join('')}</select></div>
+        <div class="field"><label class="label" for="ne-grupo">Grupo</label><select class="select" id="ne-grupo"><option>P. Fijo</option><option>Eventual</option></select></div>
+        <div class="field"><label class="label" for="ne-imss">IMSS</label><select class="select" id="ne-imss"><option>SI</option><option>NO</option></select></div>
+        <div class="form-actions"><button type="button" class="btn btn-ghost" data-action="new-emp-cancel">Cancelar</button><button type="submit" class="btn btn-primary">Guardar empleado</button></div>
+      </form>` : ''}
+      <div class="tbl-wrap" style="${ui.newEmp?'':'border-top:none'}"><table class="tbl">
+        <thead><tr><th>Nombre</th><th>Puesto</th><th>Grupo</th><th>IMSS</th><th>Reclutador</th><th>Genera HE</th><th class="num">Registros</th><th>Activo</th></tr></thead>
+        <tbody>${lista.map(e => `<tr style="${e.activo?'':'opacity:.55'}"><td><b style="font-weight:500">${esc(e.nombre)}</b></td><td>${esc(e.puesto)}</td><td><span class="badge ${e.grupo==='Eventual'?'amber':''}">${e.grupo}</span></td><td>${e.imss}</td><td class="muted">${e.reclutador}</td><td>${generaHE(e) ? 'Sí' : '<span class="badge ok">Solo alimentos</span>'}</td><td class="num">${registros.filter(r => r.empId===e.id).length}</td><td><button class="switch ${e.activo?'on':''}" data-action="toggle-activo" data-id="${e.id}" ${sup?'':'disabled'} aria-label="Activo"></button></td></tr>`).join('') || '<tr><td colspan="8"><div class="empty-state">Sin resultados</div></td></tr>'}</tbody>
+      </table></div>
+    </div>
+    <div class="faint" style="font-size:12px">Los empleados nunca se borran: al desactivarlos dejan de aparecer en la captura pero conservan su historial.</div>`;
+  const qi = $('emp-q');
+  qi.oninput = e => { ui.empQ = e.target.value; const pos = e.target.selectionStart; renderEmpleados(); const n = $('emp-q'); n.focus(); n.setSelectionRange(pos,pos); };
+  const f = $('new-emp-form');
+  if (f) {
+    $('ne-nombre').focus();
+    f.onsubmit = ev => {
+      ev.preventDefault();
+      const nombre = $('ne-nombre').value.trim().replace(/\s+/g,' ');
+      if (!nombre) return;
+      if (EMPLEADOS.some(x => normStr(x.nombre) === normStr(nombre))) { toast('Ya existe un empleado con ese nombre'); return; }
+      const grupo = $('ne-grupo').value;
+      EMPLEADOS.push({ id: Math.max(...EMPLEADOS.map(x => x.id)) + 1, nombre, puesto: $('ne-puesto').value, grupo, reclutador: grupo === 'Eventual' ? 'EVENTUAL' : 'FIJO', imss: $('ne-imss').value, activo:true });
+      ui.newEmp = false; ui.empFiltro = 'activos'; ui.empQ = '';
+      toast(`Alta: ${nombre}`); renderEmpleados();
+    };
+  }
+}
+
+/* ═════════════ TARIFAS ═════════════ */
+function renderTarifas(){
+  const sup = esSup();
+  document.querySelector('[data-viewid="tarifas"]').innerHTML = `
+    <div class="view-head">
+      <div><h2>Tarifas y reglas</h2><p>Basado en los criterios de horas extra definidos por nómina</p></div>
+    </div>
+    ${!sup ? '<div class="alert amber"><span class="alert-icon">🔒</span><span>Solo el supervisor puede modificar tarifas. Cambia a <strong>Supervisor</strong> en la barra lateral para probarlo.</span></div>' : ''}
+    <div class="grid-3-1">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Tipos de hora</div><div class="card-subtitle">Tarifa base por hora</div></div>${sup ? '<button class="btn btn-brand btn-xs" data-action="save-tarifas">Guardar cambios</button>' : ''}</div>
+        <div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Tipo</th><th>Cuándo aplica</th><th class="num">Tarifa / hr</th><th class="num">Registros</th></tr></thead>
+          <tbody>${Object.entries(TIPOS).map(([k,t]) => `<tr><td><span class="tipo-pill ${tipoCls(k)}">${t.label}</span></td><td class="muted" style="white-space:normal;min-width:180px">${t.desc}</td><td class="num"><input class="input sm tarifa-input" data-tk="${k}" type="number" min="0" step="5" value="${t.tarifa}" ${sup?'':'disabled'}></td><td class="num">${registros.filter(r => r.tipo===k).length}</td></tr>`).join('')}</tbody>
+        </table></div>
+        <div class="card-body" style="padding-top:12px"><div class="faint" style="font-size:12px">Cada registro guarda la tarifa vigente al capturarlo. Cambiar una tarifa aquí solo afecta capturas nuevas; los registros ya guardados no se recalculan.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Horario base</div></div>
+        <div class="card-body"><div class="rule-list">
+          <div class="rule"><span>Lunes a miércoles</span><b>8:00 – 17:00</b></div>
+          <div class="rule"><span>Jueves a sábado</span><b>8:00 – 18:00</b></div>
+          <div class="rule"><span>Domingo</span><b>Descanso</b></div>
+        </div><div class="faint" style="font-size:12px;margin-top:10px">Lo trabajado fuera de este horario cuenta como hora extra.</div></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Matriz de tarifas</div><div class="card-subtitle">Según grupo y momento en que se genera la hora</div></div></div>
+        <div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Situación</th><th class="num">P. Fijo</th><th class="num">Eventual</th></tr></thead>
+          <tbody>
+            <tr><td>Entre semana, horas 1–10</td><td class="num">$60</td><td class="num">$60</td></tr>
+            <tr><td>Entre semana, hora 11 en adelante</td><td class="num">$80</td><td class="num"><span class="badge amber">Por confirmar</span></td></tr>
+            <tr><td>Domingo</td><td class="num">$80</td><td class="num">$70</td></tr>
+            <tr><td>Hora muerta (normal)</td><td class="num">$30</td><td class="num">$30</td></tr>
+            <tr><td>Hora muerta (hora 11+ o domingo)</td><td class="num">$40</td><td class="num"><span class="badge amber">Por confirmar</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Alimentos y excepciones</div></div>
+        <div class="card-body"><div class="rule-list">
+          <div class="rule"><span>Desayuno · entrada a las 6:00 AM o antes</span><b>$50</b></div>
+          <div class="rule"><span>Cena · salida a las 10:00 PM o después</span><b>$50</b></div>
+          <div class="rule"><span>Almuerzo · criterio por confirmar</span><b>$50</b></div>
+          <div class="rule"><span>Coordinador de Operaciones</span><b>Solo alimentos</b></div>
+          <div class="rule"><span>Almacenista</span><b>Solo alimentos</b></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Pendientes por confirmar con nómina</div><div class="card-subtitle">Necesarios antes de automatizar el cálculo con hora de entrada y salida</div></div></div>
+      <div class="card-body"><ol class="q-list">
+        <li>La hora 11, ¿se cuenta por jornada continua o acumulada en la semana?</li>
+        <li>Si foránea y local cuestan igual, ¿qué las distingue y para qué se usa la diferencia?</li>
+        <li>¿Cuándo aplica el almuerzo y es siempre de $50?</li>
+        <li>¿El personal eventual cobra distinto los sábados o la hora 11+?</li>
+        <li>¿Quién decide que una hora es "muerta" y con qué criterio?</li>
+        <li>¿Hay registros confiables de checador con hora de entrada y salida?</li>
+      </ol></div>
+    </div>`;
+}
+
+/* ═════════════ ACCIONES GLOBALES ═════════════ */
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-action]');
+  if (!a || a.disabled) return;
+  const act = a.dataset.action;
+  switch (act) {
+    case 'nav': irA(a.dataset.view); break;
+    case 'role': {
+      ui.rol = a.dataset.rol; ui.confirmDel = null; ui.newEmp = false;
+      document.querySelectorAll('.role-seg button').forEach(b => b.classList.toggle('on', b.dataset.rol === ui.rol));
+      const u = USUARIOS[ui.rol]; $('u-avatar').textContent = u.ini; $('u-name').textContent = u.nombre; $('u-role').textContent = u.rol;
+      toast(`Ahora como ${u.rol}: ${u.nombre}`); render(); break;
+    }
+    case 'week-prev': ui.semana = Math.max(SEMANAS[0], ui.semana-1); ui.confirmDel = null; renderSemana(); break;
+    case 'week-next': ui.semana = Math.min(SEMANA_ACTUAL, ui.semana+1); ui.confirmDel = null; renderSemana(); break;
+    case 'close-week': toast('Demo: al cerrar, la semana 41 queda bloqueada y lista para exportar'); break;
+    case 'del-ask': ui.confirmDel = +a.dataset.id; renderSemana(); break;
+    case 'del-no': ui.confirmDel = null; renderSemana(); break;
+    case 'del-yes': registros = registros.filter(r => r.id !== +a.dataset.id); ui.confirmDel = null; toast('Registro eliminado'); renderSemana(); break;
+    case 'goto-emp': ui.empSel = +a.dataset.emp; irA('empleado'); break;
+    case 'per-quick': ui.perDesde = a.dataset.a; ui.perHasta = a.dataset.b; renderPeriodo(); break;
+    case 'exp-fmt': ui.expFmt = a.dataset.fmt; ui.copyFallback = false; renderExportar(); break;
+    case 'copy-export': {
+      const d = datosExport(), txt = tsv(d);
+      const fallback = () => { ui.copyFallback = true; renderExportar(); };
+      try {
+        navigator.clipboard.writeText(txt).then(() => toast(`Copiadas ${d.rows.length} filas — pégalas en Excel`)).catch(fallback);
+      } catch (_) { fallback(); }
+      break;
+    }
+    case 'emp-filtro': ui.empFiltro = a.dataset.f; renderEmpleados(); break;
+    case 'new-emp': ui.newEmp = true; renderEmpleados(); break;
+    case 'new-emp-cancel': ui.newEmp = false; renderEmpleados(); break;
+    case 'toggle-activo': {
+      const emp = empById(+a.dataset.id); emp.activo = !emp.activo;
+      toast(`${corto(emp.nombre)} ${emp.activo ? 'reactivado' : 'desactivado'}`); renderEmpleados(); break;
+    }
+    case 'save-tarifas': {
+      let n = 0;
+      document.querySelectorAll('[data-tk]').forEach(i => { const v = parseFloat(i.value); if (v >= 0 && TIPOS[i.dataset.tk].tarifa !== v) { TIPOS[i.dataset.tk].tarifa = v; n++; } });
+      toast(n ? `${n} tarifa${n>1?'s':''} actualizada${n>1?'s':''} · aplica a capturas nuevas` : 'Sin cambios'); renderTarifas(); break;
+    }
+  }
+});
+
+let toastT;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+
+/* Init */
+$('domingo-alert').hidden = !esDomingo(cap.fecha);
+renderCaptura();
+</script>
