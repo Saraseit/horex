@@ -1,7 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { iniciales } from '../logica/formato.js';
 import { useSesion } from '../sesion/contexto.js';
-import { useToast } from './useToast.js';
 
 const SECCIONES_NAVEGACION = [
   {
@@ -34,8 +33,7 @@ const estaEn = (pathname, ruta) => pathname === ruta || pathname.startsWith(`${r
 export default function Sidebar() {
   const { pathname } = useLocation();
   const navegar = useNavigate();
-  const { usuario } = useSesion();
-  const toast = useToast();
+  const { usuario, cerrarSesion } = useSesion();
 
   return (
     <aside className="sidebar">
@@ -68,8 +66,7 @@ export default function Sidebar() {
           <div><div className="user-name">{usuario.nombre}</div><div className="user-role">{ROLES[usuario.rol]}</div></div>
         </div>
         <div className="role-seg uno">
-          {/* El inicio de sesión real llega en la Fase 3. */}
-          <button type="button" onClick={() => toast('El inicio de sesión se activa en la Fase 3')}>Cerrar sesión</button>
+          <button type="button" onClick={async () => { await cerrarSesion(); navegar('/login', { replace: true }); }}>Cerrar sesión</button>
         </div>
       </div>
     </aside>

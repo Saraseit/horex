@@ -198,3 +198,12 @@ th.sun,td.sun{background:color-mix(in srgb,var(--accent-light) 55%,transparent)}
 .casilla:disabled{cursor:not-allowed;opacity:.35}
 .tbl .col-casilla{width:1%;padding-right:4px}
 .tbl tbody tr.seleccionada td{background:var(--brand-light)}
+
+/* ── Agregado en Horex (no está en la demo): inicio de sesión ── */
+.login-pagina{min-height:100%;display:grid;place-items:center;padding:24px 16px;background:var(--bg)}
+.login-tarjeta{width:100%;max-width:380px}
+.login-logo{font-size:22px;font-weight:700;color:var(--brand);letter-spacing:-.5px;display:flex;align-items:center;gap:9px}
+.login-logo span{width:30px;height:30px;background:var(--accent);border-radius:var(--radius-sm);display:grid;place-items:center;font-size:15px;color:#fff}
+.login-titulo{font-size:18px;font-weight:700;letter-spacing:-.2px}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .login-logo{color:var(--fg)} }
+:root[data-theme="dark"] .login-logo{color:var(--fg)}

@@ -1,15 +1,17 @@
 // Sirve la app compilada (dist/) en Railway (servicio horex-web) sólo con módulos de Node.
 // Las rutas que no son archivo devuelven index.html (rutas del cliente). /salud es el healthcheck.
-// En la Fase 3 aquí se agrega el reenvío de /api/* a horex-api por la red privada (variable API_INTERNA).
+// /api/* se reenvía a horex-api por la red privada de Railway (API_INTERNA): el navegador ve un solo
+// origen, la cookie de sesión es de primera parte y la API no queda expuesta a internet.
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { createServer } from 'node:http';
+import { createServer, request } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createGzip } from 'node:zlib';
 
 const RAIZ = resolve(fileURLToPath(new URL('.', import.meta.url)), 'dist');
 const PUERTO = Number(process.env.PORT) || 3000;
+const API_INTERNA = process.env.API_INTERNA; // p. ej. http://horex-api.railway.internal:8080
 const TIPOS = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -32,9 +34,34 @@ async function infoArchivo(ruta) {
   }
 }
 
+const json = (res, estado, cuerpo) => res.writeHead(estado, { 'content-type': 'application/json; charset=utf-8' }).end(JSON.stringify(cuerpo));
+
+function reenviarApi(req, res) {
+  if (!API_INTERNA) return json(res, 503, { error: 'La API no está configurada (falta API_INTERNA).' });
+  const destino = new URL(req.url, API_INTERNA);
+  const cabeceras = {
+    ...req.headers,
+    host: destino.host,
+    'x-forwarded-for': [req.headers['x-forwarded-for'], req.socket.remoteAddress].filter(Boolean).join(', '),
+    'x-forwarded-proto': req.headers['x-forwarded-proto'] ?? 'http',
+  };
+  const salida = request(destino, { method: req.method, headers: cabeceras, timeout: 30_000 }, (respuesta) => {
+    res.writeHead(respuesta.statusCode, respuesta.headers);
+    respuesta.pipe(res);
+  });
+  salida.on('timeout', () => salida.destroy(new Error('la API tardó demasiado')));
+  salida.on('error', (e) => {
+    console.error(`API: ${e.message}`);
+    if (!res.headersSent) json(res, 502, { error: 'No se pudo contactar al servidor. Intenta de nuevo en un momento.' });
+    else res.end();
+  });
+  req.pipe(salida);
+}
+
 async function responder(req, res) {
-  if (req.method !== 'GET' && req.method !== 'HEAD') return res.writeHead(405).end();
   const url = new URL(req.url, 'http://local');
+  if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return reenviarApi(req, res);
+  if (req.method !== 'GET' && req.method !== 'HEAD') return res.writeHead(405).end();
   if (url.pathname === '/salud') return res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
 
   let pedido;
