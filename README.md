@@ -101,8 +101,13 @@ Variables en Railway (los valores viven en Railway y en el `.env` local, nunca e
 - `horex-web`: `API_INTERNA=http://${{horex-api.RAILWAY_PRIVATE_DOMAIN}}:${{horex-api.PORT}}`
 
 Repositorio: https://github.com/Saraseit/horex (privado). Los dos servicios despliegan la rama `main` en cada
-push: `horex-web` desde la raíz (`npm run build` y `npm start`) y `horex-api` desde `api/` (`npm start`,
-sólo cuando cambia `api/`). Los dos tienen healthcheck en `/salud`.
+push: `horex-web` desde la raíz (`npm run build`, arranca con `node servidor.js`) y `horex-api` desde `api/`
+(arranca con `node index.js`, sólo cuando cambia `api/`). Los dos tienen healthcheck en `/salud` y corren en
+la región `iad` (Virginia), la más cercana a Neon (us-east-2).
+
+Se arrancan con `node` directo y no con `npm start`: al redesplegar o mover de región, Railway manda SIGTERM;
+npm lo reporta como error y el despliegue queda marcado como caído. Los dos servidores atienden SIGTERM y
+salen limpios.
 
 ## Capturas de referencia
 

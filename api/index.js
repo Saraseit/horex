@@ -16,4 +16,13 @@ const puerto = Number(process.env.PORT) || 8080;
 // '::' escucha en IPv6 e IPv4: la red privada de Railway usa IPv6.
 const servidor = app.listen(puerto, '::', () => console.log(`horex-api escuchando en :${puerto}`));
 
-process.on('SIGTERM', () => servidor.close(() => bd.cerrar().finally(() => process.exit(0))));
+// Apagado limpio: Railway manda SIGTERM al redesplegar o mover de región. Se deja de aceptar peticiones,
+// se cierran las conexiones inactivas y la base, y se sale con 0 (si no, el despliegue queda como caído).
+function apagar(senal) {
+  console.log(`horex-api: ${senal}, apagando`);
+  servidor.close(() => bd.cerrar().finally(() => process.exit(0)));
+  servidor.closeIdleConnections();
+  setTimeout(() => process.exit(0), 5000).unref();
+}
+process.on('SIGTERM', apagar);
+process.on('SIGINT', apagar);

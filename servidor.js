@@ -102,10 +102,21 @@ async function responder(req, res) {
   (gzip ? flujo.pipe(createGzip()) : flujo).pipe(res);
 }
 
-createServer((req, res) => {
+const servidor = createServer((req, res) => {
   responder(req, res).catch((e) => {
     console.error(e);
     if (!res.headersSent) res.writeHead(500);
     res.end();
   });
 }).listen(PUERTO, () => console.log(`horex-web escuchando en :${PUERTO}`));
+
+// Apagado limpio: Railway manda SIGTERM al redesplegar o mover de región. Se deja de aceptar conexiones,
+// se cierran las inactivas y se sale con 0 (si no, el despliegue queda marcado como caído).
+function apagar(senal) {
+  console.log(`horex-web: ${senal}, apagando`);
+  servidor.close(() => process.exit(0));
+  servidor.closeIdleConnections();
+  setTimeout(() => process.exit(0), 5000).unref();
+}
+process.on('SIGTERM', apagar);
+process.on('SIGINT', apagar);
