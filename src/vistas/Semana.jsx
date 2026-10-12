@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Alimentos from '../componentes/Alimentos.jsx';
+import BorradoMasivo from '../componentes/BorradoMasivo.jsx';
 import Cargando from '../componentes/Cargando.jsx';
 import ConfirmacionEnLinea from '../componentes/ConfirmacionEnLinea.jsx';
 import EncabezadoVista from '../componentes/EncabezadoVista.jsx';
@@ -10,14 +11,15 @@ import Kpi from '../componentes/Kpi.jsx';
 import PildoraTipo from '../componentes/PildoraTipo.jsx';
 import Tabla from '../componentes/Tabla.jsx';
 import Tarjeta from '../componentes/Tarjeta.jsx';
+import { columnaSeleccion, useSeleccion } from '../componentes/seleccion.jsx';
 import { useToast } from '../componentes/useToast.js';
 import {
-  useCerrarSemana, useEliminarRegistro, useRegistrosSemana, useSemanasCerradas, useSemanasConDatos,
+  useCerrarSemana, useEliminarRegistros, useRegistrosSemana, useSemanasCerradas, useSemanasConDatos,
 } from '../datos/consultas.js';
 import { porDia, porEmpleado, sumar } from '../logica/agregados.js';
 import {
-  DIAS_CORTOS, claveSemana, compararSemanas, desplazarSemana, diasDeSemana, hoy, indiceDia, leerClaveSemana,
-  parseD, rangoSemanaTexto, semanaISO,
+  DIAS_CORTOS, claveSemana, compararSemanas, desplazarSemana, diasDeSemana, etiquetaSemana, hoy, indiceDia,
+  leerClaveSemana, parseD, rangoSemanaTexto, semanaISO, semanasParaElegir,
 } from '../logica/fechas.js';
 import { fechaLarga, fmtHoras, fmtMoneda, fmtTarifa, nombreCorto, redondear1 } from '../logica/formato.js';
 import { useSesion } from '../sesion/contexto.js';
@@ -30,7 +32,7 @@ export default function Semana() {
   const seleccion = params.anio && params.semana
     ? { anio: Number(params.anio), semana: Number(params.semana) }
     : actual;
-  // La key reinicia las confirmaciones pendientes al cambiar de semana.
+  // La key reinicia las confirmaciones y las casillas marcadas al cambiar de semana.
   return <ContenidoSemana key={claveSemana(seleccion)} seleccion={seleccion} actual={actual} />;
 }
 
@@ -41,7 +43,8 @@ function ContenidoSemana({ seleccion, actual }) {
   const registrosQ = useRegistrosSemana(seleccion);
   const semanasQ = useSemanasConDatos();
   const cerradasQ = useSemanasCerradas();
-  const eliminar = useEliminarRegistro();
+  const eliminar = useEliminarRegistros();
+  const marcados = useSeleccion();
   const cerrar = useCerrarSemana();
   const [confirmarId, setConfirmarId] = useState(null);
   const [confirmarCierre, setConfirmarCierre] = useState(false);
@@ -52,8 +55,7 @@ function ContenidoSemana({ seleccion, actual }) {
   const regs = registrosQ.data;
   const s = sumar(regs);
   const cerrada = cerradasQ.data.some((c) => c.anio_iso === seleccion.anio && c.semana === seleccion.semana);
-  const opciones = [...new Map([...semanasQ.data, actual, seleccion].map((o) => [claveSemana(o), o])).values()].sort(compararSemanas);
-  const etiquetaSemana = (o) => (o.anio === actual.anio ? `Semana ${o.semana}` : `Semana ${o.semana} · ${o.anio}`);
+  const opciones = semanasParaElegir(semanasQ.data, actual, seleccion);
   const ir = (o) => navegar(`/semana/${o.anio}/${o.semana}`);
   const dias = diasDeSemana(seleccion.anio, seleccion.semana);
   const empleados = porEmpleado(regs).sort((a, b) => a.lista[0].nombre.localeCompare(b.lista[0].nombre, 'es'));
@@ -67,9 +69,12 @@ function ContenidoSemana({ seleccion, actual }) {
     });
   }
 
-  function eliminarRegistro(id) {
-    eliminar.mutate(id, {
-      onSuccess: () => toast('Registro eliminado'),
+  function eliminarRegistros(ids) {
+    eliminar.mutate(ids, {
+      onSuccess: ({ eliminados: n }) => {
+        toast(n === 1 ? 'Registro eliminado' : `${n} registros eliminados`);
+        marcados.limpiar();
+      },
       onError: (e) => toast(e.message),
       onSettled: () => setConfirmarId(null),
     });
@@ -108,12 +113,12 @@ function ContenidoSemana({ seleccion, actual }) {
     if (!esSupervisor) return <span className="faint" title="Solo supervisor">—</span>;
     if (cerrada) return <span className="faint" title="Semana cerrada">—</span>;
     if (confirmarId === r.id) {
-      return <ConfirmacionEnLinea alConfirmar={() => eliminarRegistro(r.id)} alCancelar={() => setConfirmarId(null)} ocupado={eliminar.isPending} />;
+      return <ConfirmacionEnLinea alConfirmar={() => eliminarRegistros([r.id])} alCancelar={() => setConfirmarId(null)} ocupado={eliminar.isPending} />;
     }
     return <button type="button" className="btn btn-ghost btn-xs" onClick={() => setConfirmarId(r.id)}>Eliminar</button>;
   }
 
-  const columnasDetalle = [
+  const columnasDetalleBase = [
     { id: 'fecha', encabezado: 'Fecha', celda: (r) => fechaLarga(r.fecha) },
     { id: 'empleado', encabezado: 'Empleado', celda: (r) => nombreCorto(r.nombre) },
     { id: 'tipo', encabezado: 'Tipo', celda: (r) => <PildoraTipo clave={r.tipo_clave} etiqueta={r.tipo_etiqueta} /> },
@@ -126,8 +131,17 @@ function ContenidoSemana({ seleccion, actual }) {
     { id: 'accion', encabezado: '', estiloCelda: { textAlign: 'right' }, celda: accion },
   ];
   const detalle = [...regs].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
+  // Borrado masivo: sólo el supervisor y sólo en semanas abiertas.
+  const puedeBorrar = esSupervisor && !cerrada;
+  const elegibles = puedeBorrar ? detalle.map((r) => r.id) : [];
+  const columnasDetalle = puedeBorrar
+    ? [columnaSeleccion({ seleccion: marcados, elegibles }), ...columnasDetalleBase]
+    : columnasDetalleBase;
+  const cuantosMarcados = elegibles.filter((id) => marcados.tiene(id)).length;
 
-  let subtituloDetalle = esSupervisor ? 'Como supervisor puedes eliminar registros erróneos' : 'Solo el supervisor puede eliminar registros';
+  let subtituloDetalle = esSupervisor
+    ? 'Como supervisor puedes eliminar registros erróneos, uno por uno o marcando varias casillas'
+    : 'Solo el supervisor puede eliminar registros';
   if (esSupervisor && cerrada) subtituloDetalle = 'Semana cerrada: ya no se pueden eliminar registros';
 
   return (
@@ -140,7 +154,7 @@ function ContenidoSemana({ seleccion, actual }) {
       >
         <button type="button" className="btn btn-ghost btn-icon" aria-label="Semana anterior" disabled={compararSemanas(seleccion, opciones[0]) <= 0} onClick={() => ir(desplazarSemana(seleccion, -1))}>‹</button>
         <select className="select sm" id="sem-select" aria-label="Semana" value={claveSemana(seleccion)} onChange={(e) => ir(leerClaveSemana(e.target.value))}>
-          {opciones.map((o) => <option key={claveSemana(o)} value={claveSemana(o)}>{etiquetaSemana(o)}</option>)}
+          {opciones.map((o) => <option key={claveSemana(o)} value={claveSemana(o)}>{etiquetaSemana(o, actual)}</option>)}
         </select>
         <button type="button" className="btn btn-ghost btn-icon" aria-label="Semana siguiente" disabled={compararSemanas(seleccion, actual) >= 0} onClick={() => ir(desplazarSemana(seleccion, 1))}>›</button>
         {!cerrada && (confirmarCierre
@@ -178,8 +192,24 @@ function ContenidoSemana({ seleccion, actual }) {
         ) : <div className="empty-state">Sin registros esta semana</div>}
       </Tarjeta>
 
-      <Tarjeta titulo="Registros de la semana" subtitulo={subtituloDetalle} conCuerpo={false}>
-        <Tabla columnas={columnasDetalle} filas={detalle} clave={(r) => r.id} />
+      <Tarjeta
+        titulo="Registros de la semana"
+        subtitulo={subtituloDetalle}
+        conCuerpo={false}
+        accion={puedeBorrar && (
+          <BorradoMasivo
+            cantidad={cuantosMarcados}
+            ocupado={eliminar.isPending}
+            alConfirmar={() => eliminarRegistros(elegibles.filter((id) => marcados.tiene(id)))}
+          />
+        )}
+      >
+        <Tabla
+          columnas={columnasDetalle}
+          filas={detalle}
+          clave={(r) => r.id}
+          claseFila={(r) => (marcados.tiene(r.id) ? 'seleccionada' : undefined)}
+        />
       </Tarjeta>
     </section>
   );

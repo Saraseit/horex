@@ -8,25 +8,30 @@ import FilaKpis from '../componentes/FilaKpis.jsx';
 import Kpi from '../componentes/Kpi.jsx';
 import Tabla from '../componentes/Tabla.jsx';
 import Tarjeta from '../componentes/Tarjeta.jsx';
-import { useEmpleados, useRegistrosRango, useTipos } from '../datos/consultas.js';
-import { domingos, porGrupo, porSemana, porTipo, sumar, top } from '../logica/agregados.js';
+import { useEmpleados, useRegistrosRango, useSemanasConDatos, useTipos } from '../datos/consultas.js';
+import { barrasDelRango, domingos, porGrupo, porTipo, sumar, top } from '../logica/agregados.js';
 import {
-  anioDe, desplazarSemana, finDeMes, hoy, inicioDeMes, lunesDeSemana, mesAnterior, mismaSemana, nombreMes, semanaISO,
+  anioDe, claveSemana, compararSemanas, desplazarSemana, etiquetaSemana, fechasDeSemanas, hoy, leerClaveSemana,
+  mesAnterior, mismaSemana, nombreMes, semanaISO, semanasDelMes, semanasEntre, semanasParaElegir,
 } from '../logica/fechas.js';
 import { fechaCorta, fmtHoras, fmtMoneda, nombreCorto, plural } from '../logica/formato.js';
 import { etiquetaTipo } from '../logica/reglas.js';
 
-const FECHA_VALIDA = /^\d{4}-\d{2}-\d{2}$/;
+const CLAVE_VALIDA = /^\d{4}-\d{1,2}$/;
+const menor = (a, b) => (compararSemanas(a, b) <= 0 ? a : b);
 
-function atajos(hoyF) {
-  const actual = semanaISO(hoyF);
-  const hace3 = desplazarSemana(actual, -3);
-  const anterior = mesAnterior(hoyF);
+/**
+ * Atajos, siempre en semanas completas de lunes a domingo. Un mes son las semanas que tienen su jueves
+ * en ese mes (ninguna semana se parte entre dos meses).
+ */
+function atajos(hoyF, actual) {
+  const anterior = semanasDelMes(mesAnterior(hoyF));
+  const esteMes = semanasDelMes(hoyF);
   return [
-    { etiqueta: 'Semana actual', desde: lunesDeSemana(actual.anio, actual.semana), hasta: hoyF },
-    { etiqueta: 'Últimas 4 semanas', desde: lunesDeSemana(hace3.anio, hace3.semana), hasta: hoyF },
-    { etiqueta: nombreMes(anterior), desde: anterior, hasta: finDeMes(anterior) },
-    { etiqueta: nombreMes(hoyF), desde: inicioDeMes(hoyF), hasta: hoyF },
+    { etiqueta: 'Semana actual', desde: actual, hasta: actual },
+    { etiqueta: 'Últimas 4 semanas', desde: desplazarSemana(actual, -3), hasta: actual },
+    { etiqueta: nombreMes(mesAnterior(hoyF)), desde: anterior.desde, hasta: anterior.hasta },
+    { etiqueta: nombreMes(hoyF), desde: menor(esteMes.desde, actual), hasta: menor(esteMes.hasta, actual) },
   ];
 }
 
@@ -34,23 +39,28 @@ export default function ReportePeriodo() {
   const [busqueda, setBusqueda] = useSearchParams();
   const navegar = useNavigate();
   const hoyF = hoy();
-  const rapidos = atajos(hoyF);
-  const leer = (k, defecto) => (FECHA_VALIDA.test(busqueda.get(k) ?? '') ? busqueda.get(k) : defecto);
-  const desde = leer('desde', rapidos[1].desde);
-  const hasta = leer('hasta', rapidos[1].hasta);
+  const actual = semanaISO(hoyF);
+  const rapidos = atajos(hoyF, actual);
+  const leer = (k, defecto) => (CLAVE_VALIDA.test(busqueda.get(k) ?? '') ? menor(leerClaveSemana(busqueda.get(k)), actual) : defecto);
+  let desde = leer('desde', rapidos[1].desde);
+  let hasta = leer('hasta', rapidos[1].hasta);
+  if (compararSemanas(desde, hasta) > 0) [desde, hasta] = [hasta, desde];
+  const fechas = fechasDeSemanas(desde, hasta);
 
-  const registrosQ = useRegistrosRango(desde, hasta);
+  const registrosQ = useRegistrosRango(fechas.desde, fechas.hasta);
+  const semanasQ = useSemanasConDatos();
   const empleadosQ = useEmpleados();
   const tiposQ = useTipos();
-  const consultas = [registrosQ, empleadosQ, tiposQ];
+  const consultas = [registrosQ, semanasQ, empleadosQ, tiposQ];
   if (consultas.some((q) => q.isPending)) return <Cargando error={consultas.find((q) => q.error)?.error} />;
 
   const regs = registrosQ.data;
   const tipos = tiposQ.data;
   const empleadosPorId = new Map(empleadosQ.data.map((e) => [e.id, e]));
-  const actual = semanaISO(hoyF);
+  const semanas = semanasEntre(desde, hasta);
+  const opciones = semanasParaElegir(semanasQ.data, actual, desde, hasta);
   const s = sumar(regs);
-  const semanas = porSemana(regs);
+  const barras = barrasDelRango(regs, semanas, actual);
   const grupos = porGrupo(regs, empleadosPorId);
   const dom = sumar(domingos(regs));
   const ordenTipos = [...tipos.map((t) => t.clave), null];
@@ -59,9 +69,9 @@ export default function ReportePeriodo() {
     .sort((a, b) => b.total - a.total);
   const mejores = top(regs, 10);
 
-  const fijarRango = (d, h) => setBusqueda({ desde: d, hasta: h }, { replace: true });
-  const cambiarDesde = (v) => { if (FECHA_VALIDA.test(v)) fijarRango(v, v > hasta ? v : hasta); };
-  const cambiarHasta = (v) => { if (FECHA_VALIDA.test(v)) fijarRango(v < desde ? v : desde, v); };
+  const fijarRango = (d, h) => setBusqueda({ desde: claveSemana(d), hasta: claveSemana(h) }, { replace: true });
+  const cambiarDesde = (clave) => { const d = leerClaveSemana(clave); fijarRango(d, compararSemanas(d, hasta) > 0 ? d : hasta); };
+  const cambiarHasta = (clave) => { const h = leerClaveSemana(clave); fijarRango(compararSemanas(h, desde) < 0 ? h : desde, h); };
 
   const columnasTop = [
     { id: 'n', encabezado: '#', claseCelda: 'mono faint', celda: (f) => mejores.indexOf(f) + 1 },
@@ -72,16 +82,21 @@ export default function ReportePeriodo() {
     { id: 'alim', encabezado: 'Alimentos', tipo: 'num', celda: (f) => fmtMoneda(f.alim) },
     { id: 'total', encabezado: 'Total', tipo: 'num', celda: (f) => <b>{fmtMoneda(f.total)}</b> },
   ];
+  const selectorSemana = (id, etiqueta, valor, alCambiar) => (
+    <select className="select sm" id={id} aria-label={etiqueta} value={claveSemana(valor)} onChange={(e) => alCambiar(e.target.value)}>
+      {opciones.map((o) => <option key={claveSemana(o)} value={claveSemana(o)}>{etiquetaSemana(o, actual)}</option>)}
+    </select>
+  );
 
   return (
     <section className="view">
       <EncabezadoVista
         titulo="Reporte por período"
-        subtitulo={`${fechaCorta(desde)} – ${fechaCorta(hasta)} ${anioDe(hasta)} · ${semanas.length} ${plural(semanas.length, 'semana')}`}
+        subtitulo={`${fechaCorta(fechas.desde)} – ${fechaCorta(fechas.hasta)} ${anioDe(fechas.hasta)} · ${semanas.length} ${plural(semanas.length, 'semana')}`}
       >
         <div className="seg">
           {rapidos.map((r) => {
-            const activo = r.desde === desde && r.hasta === hasta;
+            const activo = mismaSemana(r.desde, desde) && mismaSemana(r.hasta, hasta);
             return (
               <button key={r.etiqueta} type="button" className={activo ? 'on' : undefined} aria-pressed={activo} onClick={() => fijarRango(r.desde, r.hasta)}>
                 {r.etiqueta}
@@ -89,9 +104,9 @@ export default function ReportePeriodo() {
             );
           })}
         </div>
-        <input type="date" className="input sm" id="per-desde" aria-label="Desde" value={desde} max={hoyF} onChange={(e) => cambiarDesde(e.target.value)} />
+        {selectorSemana('per-desde', 'Desde la semana', desde, cambiarDesde)}
         <span className="faint">a</span>
-        <input type="date" className="input sm" id="per-hasta" aria-label="Hasta" value={hasta} max={hoyF} onChange={(e) => cambiarHasta(e.target.value)} />
+        {selectorSemana('per-hasta', 'Hasta la semana', hasta, cambiarHasta)}
       </EncabezadoVista>
 
       <FilaKpis>
@@ -102,13 +117,11 @@ export default function ReportePeriodo() {
       </FilaKpis>
 
       <div className="grid-2">
-        <Tarjeta titulo="Total por semana" subtitulo="HE + alimentos">
-          {semanas.length ? (
-            <BarrasVerticales
-              items={semanas.map((w) => ({ clave: `${w.anio}-${w.semana}`, etiqueta: `Sem ${w.semana}`, valor: w.total, actual: mismaSemana(w, actual) }))}
-              formato={fmtMoneda}
-            />
-          ) : <div className="empty-state">Sin datos</div>}
+        <Tarjeta
+          titulo={barras.porMes ? 'Total por mes' : 'Total por semana'}
+          subtitulo={barras.porMes ? 'HE + alimentos · cada semana cuenta en el mes de su jueves' : 'HE + alimentos'}
+        >
+          {regs.length ? <BarrasVerticales items={barras.items} formato={fmtMoneda} /> : <div className="empty-state">Sin datos</div>}
         </Tarjeta>
         <Tarjeta titulo="Personal fijo vs eventual" subtitulo="Participación en el total">
           <BarraDividida

@@ -192,3 +192,9 @@ th.sun,td.sun{background:color-mix(in srgb,var(--accent-light) 55%,transparent)}
   .kpi .k-val{font-size:18px}
   .vbars{gap:8px}
 }
+
+/* ── Agregado en Horex (no está en la demo): casillas para el borrado masivo ── */
+.casilla{width:15px;height:15px;margin:0;vertical-align:middle;accent-color:var(--brand-2);cursor:pointer}
+.casilla:disabled{cursor:not-allowed;opacity:.35}
+.tbl .col-casilla{width:1%;padding-right:4px}
+.tbl tbody tr.seleccionada td{background:var(--brand-light)}

@@ -7,7 +7,7 @@ import { useToast } from '../componentes/useToast.js';
 import { useEmpleados, useRegistrosRango, useSemanasConDatos, useTipos } from '../datos/consultas.js';
 import { FORMATOS_EXPORTACION, aCSV, aTSV, aXLSX, datosExport, nombreArchivo } from '../logica/exportar.js';
 import {
-  claveSemana, compararSemanas, diasDeSemana, hoy, leerClaveSemana, lunesDeSemana, semanaISO,
+  claveSemana, compararSemanas, etiquetaSemana, fechasDeSemanas, hoy, leerClaveSemana, semanaISO, semanasParaElegir,
 } from '../logica/fechas.js';
 import { fmtMoneda, plural } from '../logica/formato.js';
 
@@ -34,15 +34,15 @@ export default function Exportar() {
   const hasta = leer('hasta');
   const formato = FORMATOS_EXPORTACION.some((f) => f.valor === busqueda.get('formato')) ? busqueda.get('formato') : 'resumen';
 
-  const registrosQ = useRegistrosRango(lunesDeSemana(desde.anio, desde.semana), diasDeSemana(hasta.anio, hasta.semana)[6]);
+  const fechas = fechasDeSemanas(desde, hasta);
+  const registrosQ = useRegistrosRango(fechas.desde, fechas.hasta);
   const semanasQ = useSemanasConDatos();
   const empleadosQ = useEmpleados();
   const tiposQ = useTipos();
   const consultas = [registrosQ, semanasQ, empleadosQ, tiposQ];
   if (consultas.some((q) => q.isPending)) return <Cargando error={consultas.find((q) => q.error)?.error} />;
 
-  const opciones = [...new Map([...semanasQ.data, actual, desde, hasta].map((o) => [claveSemana(o), o])).values()].sort(compararSemanas);
-  const etiquetaSemana = (o) => (o.anio === actual.anio ? `Semana ${o.semana}` : `Semana ${o.semana} · ${o.anio}`);
+  const opciones = semanasParaElegir(semanasQ.data, actual, desde, hasta);
   const d = datosExport({ registros: registrosQ.data, empleados: empleadosQ.data, tipos: tiposQ.data, formato });
   const vistaPrevia = d.filas.slice(0, FILAS_VISTA_PREVIA);
   const archivo = (extension) => nombreArchivo({ desde, hasta, formato, extension });
@@ -97,13 +97,13 @@ export default function Exportar() {
             <div className="field">
               <label className="label" htmlFor="exp-desde">Desde</label>
               <select className="select sm" id="exp-desde" value={claveSemana(desde)} onChange={(e) => cambiarDesde(e.target.value)}>
-                {opciones.map((o) => <option key={claveSemana(o)} value={claveSemana(o)}>{etiquetaSemana(o)}</option>)}
+                {opciones.map((o) => <option key={claveSemana(o)} value={claveSemana(o)}>{etiquetaSemana(o, actual)}</option>)}
               </select>
             </div>
             <div className="field">
               <label className="label" htmlFor="exp-hasta">Hasta</label>
               <select className="select sm" id="exp-hasta" value={claveSemana(hasta)} onChange={(e) => cambiarHasta(e.target.value)}>
-                {opciones.map((o) => <option key={claveSemana(o)} value={claveSemana(o)}>{etiquetaSemana(o)}</option>)}
+                {opciones.map((o) => <option key={claveSemana(o)} value={claveSemana(o)}>{etiquetaSemana(o, actual)}</option>)}
               </select>
             </div>
             <div className="field">

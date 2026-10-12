@@ -1,5 +1,6 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Alimentos from '../componentes/Alimentos.jsx';
+import BorradoMasivo from '../componentes/BorradoMasivo.jsx';
 import BarrasHorizontales from '../componentes/BarrasHorizontales.jsx';
 import BarrasVerticales from '../componentes/BarrasVerticales.jsx';
 import Cargando from '../componentes/Cargando.jsx';
@@ -11,13 +12,16 @@ import PildoraTipo from '../componentes/PildoraTipo.jsx';
 import Segmentado from '../componentes/Segmentado.jsx';
 import Tabla from '../componentes/Tabla.jsx';
 import Tarjeta from '../componentes/Tarjeta.jsx';
-import { useConteos, useEmpleados, useRegistrosEmpleado, useTipos } from '../datos/consultas.js';
-import { agrupar, domingos, porTipo, sumar } from '../logica/agregados.js';
+import { columnaSeleccion, useSeleccion } from '../componentes/seleccion.jsx';
+import { useToast } from '../componentes/useToast.js';
 import {
-  anioDe, claveSemana, desplazarSemana, hoy, lunesDeSemana, mesCorto, mismaSemana, semanaISO, semanasEntre,
-} from '../logica/fechas.js';
+  useConteos, useEliminarRegistros, useEmpleados, useRegistrosEmpleado, useSemanasCerradas, useTipos,
+} from '../datos/consultas.js';
+import { barrasDelRango, domingos, porTipo, sumar } from '../logica/agregados.js';
+import { desplazarSemana, fechasDeSemanas, hoy, semanaISO, semanasEntre } from '../logica/fechas.js';
 import { fechaLarga, fmtHoras, fmtMoneda, fmtTarifa, siNo } from '../logica/formato.js';
 import { etiquetaTipo } from '../logica/reglas.js';
+import { useSesion } from '../sesion/contexto.js';
 
 const RANGOS = [
   { valor: '4', etiqueta: 'Últimas 4 semanas' },
@@ -25,18 +29,16 @@ const RANGOS = [
   { valor: 'anio', etiqueta: 'Este año' },
 ];
 
-/** Fechas y semanas que cubre cada opción de rango. */
-function calcularRango(rango, hoyF) {
-  const actual = semanaISO(hoyF);
-  if (rango === 'anio') {
-    const desde = `${anioDe(hoyF)}-01-01`;
-    return { desde, semanas: semanasEntre(semanaISO(desde), actual), descripcion: `Año ${anioDe(hoyF)}` };
-  }
-  const semanas = semanasEntre(desplazarSemana(actual, rango === '8' ? -7 : -3), actual);
+/** Semanas completas (lunes a domingo) que cubre cada opción de rango, hasta la semana actual. */
+function calcularRango(rango, actual) {
+  const primera = rango === 'anio'
+    ? { anio: actual.anio, semana: 1 }
+    : desplazarSemana(actual, rango === '8' ? -7 : -3);
+  const semanas = semanasEntre(primera, actual);
   return {
-    desde: lunesDeSemana(semanas[0].anio, semanas[0].semana),
     semanas,
-    descripcion: `Semanas ${semanas[0].semana}–${actual.semana}`,
+    ...fechasDeSemanas(primera, actual),
+    descripcion: rango === 'anio' ? `Año ${actual.anio} · semanas 1–${actual.semana}` : `Semanas ${primera.semana}–${actual.semana}`,
   };
 }
 
@@ -45,20 +47,24 @@ export default function ReporteEmpleado() {
   const [busqueda, setBusqueda] = useSearchParams();
   const navegar = useNavigate();
   const rango = RANGOS.some((r) => r.valor === busqueda.get('rango')) ? busqueda.get('rango') : '4';
-  const hoyF = hoy();
-  const actual = semanaISO(hoyF);
-  const { desde, semanas, descripcion } = calcularRango(rango, hoyF);
+  const actual = semanaISO(hoy());
+  const { desde, hasta, semanas, descripcion } = calcularRango(rango, actual);
+  const toast = useToast();
+  const { esSupervisor } = useSesion();
+  const marcados = useSeleccion();
+  const eliminar = useEliminarRegistros();
 
   const empleadosQ = useEmpleados();
   const conteosQ = useConteos();
   const tiposQ = useTipos();
+  const cerradasQ = useSemanasCerradas();
   const conRegistros = (empleadosQ.data ?? [])
     .filter((e) => conteosQ.data?.porEmpleado[e.id] > 0)
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   const empleadoId = id ? Number(id) : conRegistros[0]?.id;
-  const registrosQ = useRegistrosEmpleado(empleadoId, desde, hoyF);
+  const registrosQ = useRegistrosEmpleado(empleadoId, desde, hasta);
 
-  const base = [empleadosQ, conteosQ, tiposQ];
+  const base = [empleadosQ, conteosQ, tiposQ, cerradasQ];
   if (base.some((q) => q.isPending)) return <Cargando error={base.find((q) => q.error)?.error} />;
   const empleado = empleadosQ.data.find((e) => e.id === empleadoId);
   if (!empleado) {
@@ -76,18 +82,20 @@ export default function ReporteEmpleado() {
   const tipos = tiposQ.data;
   const opciones = conRegistros.some((e) => e.id === empleado.id) ? conRegistros : [...conRegistros, empleado];
 
-  let barras;
-  if (rango === 'anio') {
-    const porMes = agrupar(regs, (r) => r.fecha.slice(0, 7));
-    const meses = Array.from({ length: Number(hoyF.slice(5, 7)) }, (_, i) => `${anioDe(hoyF)}-${String(i + 1).padStart(2, '0')}`);
-    barras = meses.map((m) => ({
-      clave: m, etiqueta: mesCorto(`${m}-01`), valor: sumar(porMes.get(m) ?? []).total, actual: m === hoyF.slice(0, 7),
-    }));
-  } else {
-    const porSem = agrupar(regs, (r) => claveSemana({ anio: r.anio_iso, semana: r.semana }));
-    barras = semanas.map((w) => ({
-      clave: claveSemana(w), etiqueta: `Sem ${w.semana}`, valor: sumar(porSem.get(claveSemana(w)) ?? []).total, actual: mismaSemana(w, actual),
-    }));
+  const barras = barrasDelRango(regs, semanas, actual);
+
+  // Borrado masivo: sólo el supervisor y sólo registros de semanas abiertas.
+  const cerrada = (r) => cerradasQ.data.some((c) => c.anio_iso === r.anio_iso && c.semana === r.semana);
+  const elegibles = esSupervisor ? regs.filter((r) => !cerrada(r)).map((r) => r.id) : [];
+  const cuantosMarcados = elegibles.filter((rid) => marcados.tiene(rid)).length;
+  function eliminarMarcados() {
+    eliminar.mutate(elegibles.filter((rid) => marcados.tiene(rid)), {
+      onSuccess: ({ eliminados: n }) => {
+        toast(n === 1 ? 'Registro eliminado' : `${n} registros eliminados`);
+        marcados.limpiar();
+      },
+      onError: (e) => toast(e.message),
+    });
   }
 
   const horasPorTipo = porTipo(regs)
@@ -101,7 +109,7 @@ export default function ReporteEmpleado() {
     setBusqueda(nueva, { replace: true });
   };
 
-  const columnas = [
+  const columnasBase = [
     { id: 'sem', encabezado: 'Sem.', claseCelda: 'mono faint', celda: (r) => r.semana },
     { id: 'fecha', encabezado: 'Fecha', celda: (r) => fechaLarga(r.fecha) },
     { id: 'tipo', encabezado: 'Tipo', celda: (r) => <PildoraTipo clave={r.tipo_clave} etiqueta={r.tipo_etiqueta} /> },
@@ -111,6 +119,9 @@ export default function ReporteEmpleado() {
     { id: 'alim', encabezado: 'Alim.', tipo: 'ctr', celda: (r) => <Alimentos registro={r} /> },
     { id: 'total', encabezado: 'Total', tipo: 'num', celda: (r) => <b>{fmtMoneda(r.total)}</b> },
   ];
+  const columnas = esSupervisor
+    ? [columnaSeleccion({ seleccion: marcados, elegibles, motivoBloqueo: () => 'Semana cerrada: no se puede eliminar' }), ...columnasBase]
+    : columnasBase;
 
   return (
     <section className="view">
@@ -141,10 +152,12 @@ export default function ReporteEmpleado() {
 
       <div className="grid-3-1">
         <Tarjeta
-          titulo={rango === 'anio' ? 'Total por mes' : 'Total por semana'}
-          subtitulo={rango === 'anio' ? 'HE + alimentos · mes actual en ámbar' : 'HE + alimentos · semana actual en ámbar'}
+          titulo={barras.porMes ? 'Total por mes' : 'Total por semana'}
+          subtitulo={barras.porMes
+            ? 'HE + alimentos · cada semana cuenta en el mes de su jueves · mes actual en ámbar'
+            : 'HE + alimentos · semana actual en ámbar'}
         >
-          <BarrasVerticales items={barras} formato={fmtMoneda} />
+          <BarrasVerticales items={barras.items} formato={fmtMoneda} />
         </Tarjeta>
         <Tarjeta titulo="Horas por tipo">
           <BarrasHorizontales
@@ -155,13 +168,20 @@ export default function ReporteEmpleado() {
         </Tarjeta>
       </div>
 
-      <Tarjeta titulo="Historial de registros" conCuerpo={false}>
+      <Tarjeta
+        titulo="Historial de registros"
+        conCuerpo={false}
+        accion={esSupervisor && (
+          <BorradoMasivo cantidad={cuantosMarcados} ocupado={eliminar.isPending} alConfirmar={eliminarMarcados} />
+        )}
+      >
         <Tabla
           columnas={columnas}
           filas={regs}
           clave={(r) => r.id}
+          claseFila={(r) => (marcados.tiene(r.id) ? 'seleccionada' : undefined)}
           pie={<>
-            <td colSpan={3}>Total</td>
+            <td colSpan={columnas.length - columnasBase.length + 3}>Total</td>
             <td className="num">{fmtHoras(s.horas)}</td>
             <td />
             <td className="num">{fmtMoneda(s.he)}</td>
