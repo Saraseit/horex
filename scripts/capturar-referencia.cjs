@@ -1,13 +1,17 @@
 // Toma las capturas de referencia de la demo (docs/referencia/horex-demo.html).
-// Uso: node scripts/capturar-referencia.cjs   (requiere @playwright/test 1.64 y su Chromium)
+// Uso: node scripts/capturar-referencia.cjs [--pruebas]   (requiere @playwright/test 1.64 y su Chromium)
 // Salida: docs/referencia/capturas/<vista>-<ancho>-<tema>[-supervisor].png
+// Con --pruebas escribe en tests/e2e/referencia/ (base de toHaveScreenshot) y oculta el pie de la barra
+// lateral, que en la app cambia a propósito (selector de rol → Cerrar sesión).
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { chromium } = require('@playwright/test');
 
 const RAIZ = path.resolve(__dirname, '..');
 const DEMO = pathToFileURL(path.join(RAIZ, 'docs/referencia/horex-demo.html')).href;
-const SALIDA = path.join(RAIZ, 'docs/referencia/capturas');
+const PRUEBAS = process.argv.includes('--pruebas');
+const SALIDA = path.join(RAIZ, PRUEBAS ? 'tests/e2e/referencia' : 'docs/referencia/capturas');
+const CSS_OCULTO = '.toast{display:none!important}' + (PRUEBAS ? '.sidebar-footer{visibility:hidden!important}' : '');
 
 const VISTAS = ['registrar', 'semana', 'empleado', 'periodo', 'exportar', 'empleados', 'tarifas'];
 const VISTAS_SUPERVISOR = ['semana', 'empleados', 'tarifas'];
@@ -17,7 +21,12 @@ const ALTO_BASE = 768;
 
 async function capturarVista(pagina, vista, archivo) {
   await pagina.click(`.sidebar [data-action="nav"][data-view="${vista}"]`);
-  await pagina.evaluate(() => { document.getElementById('content').scrollTop = 0; });
+  // El clic de Playwright desplaza la barra lateral horizontal (≤ 860 px) hasta el botón; se regresa al
+  // inicio, que es como queda al abrir una ruta directamente.
+  await pagina.evaluate(() => {
+    document.getElementById('content').scrollTop = 0;
+    document.querySelector('.sidebar').scrollLeft = 0;
+  });
   // La demo no hace scroll en body sino en .content: se agranda el viewport hasta que quepa todo.
   const ancho = pagina.viewportSize().width;
   const extra = await pagina.evaluate(() => {
@@ -41,11 +50,12 @@ async function nuevaPagina(navegador, ancho, tema) {
   await pagina.goto(DEMO, { waitUntil: 'networkidle' });
   await pagina.evaluate(() => document.fonts.ready);
   // El toast no forma parte de la referencia.
-  await pagina.addStyleTag({ content: '.toast{display:none!important}' });
+  await pagina.addStyleTag({ content: CSS_OCULTO });
   return { contexto, pagina };
 }
 
 (async () => {
+  require('node:fs').mkdirSync(SALIDA, { recursive: true });
   const navegador = await chromium.launch();
   const hechas = [];
   for (const [nombreTema, tema] of Object.entries(TEMAS)) {
@@ -57,7 +67,8 @@ async function nuevaPagina(navegador, ancho, tema) {
         hechas.push(archivo);
       }
       if (nombreTema === 'claro') {
-        await pagina.click('.role-seg [data-rol="SUPERVISOR"]');
+        // Clic programático: con --pruebas el pie de la barra lateral está oculto.
+        await pagina.evaluate(() => document.querySelector('.role-seg [data-rol="SUPERVISOR"]').click());
         for (const vista of VISTAS_SUPERVISOR) {
           const archivo = `${vista}-${ancho}-${nombreTema}-supervisor.png`;
           await capturarVista(pagina, vista, archivo);
