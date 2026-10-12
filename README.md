@@ -107,6 +107,12 @@ variantes de supervisor de Semana, Empleados y Tarifas (34 en total). Se regener
   marcado en los reportes. Entra con la base de datos (Fase 2) y la captura real (Fase 4).
 - Empleados iniciales: los 25 activos de la demo. Mirian corrige o agrega los que falten desde
   Empleados (el usuario lo prefirió así a depurar la lista del Excel).
+- **Las semanas son de lunes a domingo y ningún reporte las corta** (decisión del usuario). Los rangos se
+  eligen por semana. Un mes son las semanas con su jueves en ese mes (criterio ISO); así cada semana cae
+  completa en un solo mes.
+- **Borrado masivo** con casillas en Semana actual y Por empleado (decisión del usuario), sólo supervisor,
+  todo o nada, nunca en semanas cerradas. El borrado sigue siendo lógico: el registro conserva quién y
+  cuándo lo eliminó.
 - Los Excel con datos de nómina (`docs/*.xlsx`) no se suben al repositorio.
 - **Fase 1:** las vistas leen de `src/datos/consultas.js`, que por ahora usa un almacén en memoria
   (`almacenPrueba.js`) que imita a la base: calcula la tarifa al guardar, rechaza semanas cerradas, fechas

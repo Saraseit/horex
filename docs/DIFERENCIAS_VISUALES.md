@@ -20,6 +20,8 @@ supervisor de Semana, Empleados y Tarifas (34 capturas, tolerancia 1 % de píxel
 | Pie de la barra lateral | Selector Capturista/Supervisor y "Cambia el rol para ver permisos" | Usuario de la sesión y botón "Cerrar sesión" con el estilo de `.role-seg` | Prompt §3.2: el rol viene de la sesión | Se oculta el pie en ambas capturas |
 | Exportar | Un botón "Copiar tabla para Excel" y el aviso "En esta demo…" | "Descargar .xlsx", "Descargar .csv" y "Copiar tabla para Excel"; sin el aviso | Prompt §6.6 | Captura aprobada de la app (`app-exportar-*`) |
 | Por empleado | Sólo el selector de empleado | Además, "Últimas 4 semanas / 8 semanas / Este año". En "Este año" la gráfica es por mes | Prompt §6.4 | A 1366 px cabe en la tolerancia; a 400 px el selector baja de renglón: captura aprobada (`app-empleado-400-*`) |
+| Semana actual (supervisor) | Sólo "Eliminar" por fila, en la última columna | Además, una casilla al inicio de cada fila, "Seleccionar todos" y "Eliminar seleccionados (n)" en el encabezado de la tarjeta | Pedido del usuario: borrado masivo, y que en el celular no haya que desplazarse para borrar | Captura aprobada (`app-semana-*-supervisor`) |
+| Por período | Fechas libres "desde/hasta"; los botones de mes cortan semanas | Selectores de semana "Semana 38 a Semana 41"; el rango va del lunes de la primera al domingo de la última | Pedido del usuario: las semanas son de lunes a domingo y nunca se cortan | Captura aprobada (`app-periodo-*`) |
 | Tarifas (capturista) | "…Cambia a **Supervisor** en la barra lateral para probarlo." | "Solo el supervisor puede modificar tarifas y reglas." | Ya no existe el selector de rol | A 1366 px cabe en la tolerancia; a 400 px el aviso ocupa menos renglones: captura aprobada (`app-tarifas-400-*`) |
 
 Las capturas aprobadas (`tests/e2e/referencia/app-*.png`) se revisaron a ojo. Si esas vistas cambian a
@@ -28,10 +30,20 @@ propósito, se revisan otra vez y se regeneran con
 
 ## Cambios de comportamiento que no salen en las capturas
 
+- **Semanas completas siempre:** ningún reporte corta una semana. Por período y Exportar se eligen por
+  semana; "Semana actual" y "Últimas 4 semanas" terminan en domingo; los botones de mes toman las semanas
+  que tienen su jueves en ese mes (septiembre 2026 = semanas 36–39, del 31 ago al 27 sep), el mismo
+  criterio con el que ISO asigna semanas a un año. En Por empleado, "Este año" va de la semana 1 a la actual.
+  Si un rango pasa de 13 semanas, la gráfica se agrupa por mes con ese mismo criterio.
+- **Borrado masivo:** casillas en "Registros de la semana" (Semana actual) y en "Historial de registros"
+  (Por empleado), sólo para el supervisor. El borrado es todo o nada y pide confirmación ("¿Eliminar 3
+  registros? Sí / No"). Los registros de semanas cerradas no se pueden marcar (casilla deshabilitada con la
+  explicación). Sigue existiendo "Eliminar" por fila.
 - **Semana actual:** "Cerrar semana" pide confirmación en línea ("¿Cerrar semana? Sí / No") y de verdad
   cierra la semana; "Eliminar" sólo aparece en semanas abiertas (la demo lo dejaba en cualquier semana).
-- **Selector de semanas:** lista las semanas con datos más la actual; si una semana es de otro año, la
-  etiqueta lleva el año ("Semana 52 · 2025").
+- **Selectores de semana** (Semana actual, Por período, Exportar): todas las semanas, sin huecos, desde la
+  más antigua con datos hasta la actual; si una semana es de otro año, la etiqueta lleva el año
+  ("Semana 52 · 2025").
 - **Registrar HE:** si el guardado se rechaza (semana cerrada, fecha futura, empleado inactivo) el
   mensaje aparece en un aviso rojo sobre "Guardar registro". Las tarifas del aviso de domingo y de los
   botones salen de las tarifas vigentes.
