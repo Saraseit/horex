@@ -1,0 +1,20 @@
+/* Base portada de la demo. */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;font-family:var(--font-ui);background:var(--bg);color:var(--fg);font-size:14px;line-height:1.5}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+h2,h3,p{margin:0}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--fg-2)}
+.faint{color:var(--fg-3)}
+
+/* React monta la app dentro de #root: hereda el alto completo como el body de la demo. */
+#root{height:100%}
+
+/* La demo no declara <!doctype> y el navegador la pinta en modo quirks. La app sí está en modo estándar,
+   así que se replican los dos efectos visibles para que las tablas midan igual:
+   1. Las tablas no heredan line-height (usan normal).
+   2. Una línea sin texto propio (sólo un .switch o un .meals) no reserva el alto de una línea de texto. */
+table{line-height:normal}
+.switch,.meals{vertical-align:top}

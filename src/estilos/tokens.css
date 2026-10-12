@@ -1,0 +1,35 @@
+/* Tokens copiados literalmente de docs/referencia/horex-demo.html. No renombrar ni ajustar colores. */
+:root {
+  --bg:#f6f8fb; --surface:#ffffff; --surface-2:#eff3f8; --border:#e1e7ef; --border-focus:#3b6fd4;
+  --fg:#0f1729; --fg-2:#4a5568; --fg-3:#8a97ab;
+  --brand:#1e3a6e; --brand-2:#2a4d8f; --brand-light:#e7eef9; --on-brand:#ffffff;
+  --accent:#d97706; --accent-light:#fef3c7; --accent-hover:#b45309;
+  --ok:#15803d; --ok-light:#dcfce7; --warn:#c62828; --warn-light:#fde8e8; --info:#1d4ed8; --info-light:#e0eaff;
+  --bar:#2a4d8f; --bar-2:#d97706; --track:#e8edf4;
+  --radius-sm:6px; --radius:10px; --radius-lg:14px;
+  --shadow-sm:0 1px 3px rgba(15,23,41,.06),0 1px 2px rgba(15,23,41,.04);
+  --shadow:0 6px 18px rgba(15,23,41,.10),0 1px 3px rgba(15,23,41,.05);
+  --font-ui:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --sidebar-w:228px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0c1018; --surface:#151b27; --surface-2:#1d2533; --border:#2a3446; --border-focus:#5a8dee;
+    --fg:#e8edf5; --fg-2:#a3b0c4; --fg-3:#64728a;
+    --brand:#14284d; --brand-2:#3b6fd4; --brand-light:#1a2a48; --on-brand:#ffffff;
+    --accent:#f59e0b; --accent-light:#33240a; --accent-hover:#fbbf24;
+    --ok:#4ade80; --ok-light:#0d2b19; --warn:#f87171; --warn-light:#2f1212; --info:#93b4ff; --info-light:#16244a;
+    --bar:#5a8dee; --bar-2:#f59e0b; --track:#222c3d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0c1018; --surface:#151b27; --surface-2:#1d2533; --border:#2a3446; --border-focus:#5a8dee;
+  --fg:#e8edf5; --fg-2:#a3b0c4; --fg-3:#64728a;
+  --brand:#14284d; --brand-2:#3b6fd4; --brand-light:#1a2a48; --on-brand:#ffffff;
+  --accent:#f59e0b; --accent-light:#33240a; --accent-hover:#fbbf24;
+  --ok:#4ade80; --ok-light:#0d2b19; --warn:#f87171; --warn-light:#2f1212; --info:#93b4ff; --info-light:#16244a;
+  --bar:#5a8dee; --bar-2:#f59e0b; --track:#222c3d;
+  color-scheme: dark;
+}
