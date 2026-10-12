@@ -48,7 +48,8 @@ function useMutacion(fn, claves) {
 }
 
 export const useCrearRegistro = () => useMutacion((datos, usuario) => almacen.crearRegistro({ ...datos, usuario }), [['registros']]);
-export const useEliminarRegistro = () => useMutacion((id, usuario) => almacen.eliminarRegistro(id, usuario), [['registros']]);
+/** Recibe una lista de ids (uno o varios). */
+export const useEliminarRegistros = () => useMutacion((ids, usuario) => almacen.eliminarRegistros(ids, usuario), [['registros']]);
 export const useCerrarSemana = () => useMutacion((semana, usuario) => almacen.cerrarSemana(semana, usuario), [['semanas-cerradas']]);
 export const useCrearEmpleado = () => useMutacion((datos, usuario) => almacen.crearEmpleado(datos, usuario), [['empleados']]);
 export const useCambiarActivo = () => useMutacion(({ id, activo }, usuario) => almacen.cambiarActivo(id, activo, usuario), [['empleados']]);

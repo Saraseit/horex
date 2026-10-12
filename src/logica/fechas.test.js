@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  desplazarSemana, diasDeSemana, esDomingo, hoyMerida, indiceDia, lunesDeSemana, mesAnterior, nombreMes,
-  rangoSemanaTexto, semanaISO, semanasEntre,
+  desplazarSemana, diasDeSemana, esDomingo, etiquetaSemana, fechasDeSemanas, hoyMerida, indiceDia, lunesDeSemana,
+  mesAnterior, mesDeSemana, nombreMes, rangoSemanaTexto, semanaISO, semanasDelMes, semanasEntre, semanasParaElegir,
 } from './fechas.js';
 
 describe('semana ISO (igual que ISOWEEKNUM de Excel)', () => {
@@ -31,6 +31,32 @@ describe('semana ISO (igual que ISOWEEKNUM de Excel)', () => {
 
   it('rango de la semana como en la demo', () => {
     expect(rangoSemanaTexto(2026, 41)).toBe('5 oct – 11 oct 2026');
+  });
+});
+
+describe('rangos de semanas completas (lunes a domingo)', () => {
+  it('un rango de semanas va del lunes de la primera al domingo de la última', () => {
+    expect(fechasDeSemanas({ anio: 2026, semana: 38 }, { anio: 2026, semana: 41 })).toEqual({ desde: '2026-09-14', hasta: '2026-10-11' });
+  });
+
+  it('un mes son las semanas con su jueves en ese mes: ninguna se parte', () => {
+    // Septiembre 2026: del lun 31 ago al dom 27 sep (la semana 40 tiene su jueves el 1 oct).
+    expect(semanasDelMes('2026-09-15')).toEqual({ desde: { anio: 2026, semana: 36 }, hasta: { anio: 2026, semana: 39 } });
+    expect(semanasDelMes('2026-10-10')).toEqual({ desde: { anio: 2026, semana: 40 }, hasta: { anio: 2026, semana: 44 } });
+    // Enero 2027 empieza en viernes: su primera semana es la 1 de 2027, no la 53 de 2026.
+    expect(semanasDelMes('2027-01-20')).toEqual({ desde: { anio: 2027, semana: 1 }, hasta: { anio: 2027, semana: 4 } });
+  });
+
+  it('mes de una semana', () => {
+    expect(mesDeSemana({ anio: 2026, semana: 40 })).toBe('2026-10');
+    expect(mesDeSemana({ anio: 2026, semana: 39 })).toBe('2026-09');
+  });
+
+  it('opciones de semana sin huecos desde la más antigua con datos', () => {
+    const actual = { anio: 2026, semana: 41 };
+    expect(semanasParaElegir([{ anio: 2026, semana: 38 }, { anio: 2026, semana: 40 }], actual).map((s) => s.semana)).toEqual([38, 39, 40, 41]);
+    expect(semanasParaElegir([], actual)).toEqual([actual]);
+    expect(etiquetaSemana({ anio: 2025, semana: 52 }, actual)).toBe('Semana 52 · 2025');
   });
 });
 

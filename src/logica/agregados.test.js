@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EMPLEADOS_PRUEBA, generarRegistrosPrueba } from '../datos/datosPrueba.js';
-import { porDia, porGrupo, porSemana, porTipo, sumar, top } from './agregados.js';
+import { barrasDelRango, porDia, porGrupo, porSemana, porTipo, sumar, top } from './agregados.js';
+import { semanasEntre } from './fechas.js';
 import { completarRegistro } from './reglas.js';
 
 const registros = generarRegistrosPrueba().map(completarRegistro);
@@ -37,6 +38,25 @@ describe('agrupaciones', () => {
   it('por tipo incluye "Solo alimentos" (clave null)', () => {
     const solo = porTipo(registros).find((t) => t.clave === null);
     expect(solo).toMatchObject({ registros: 6, horas: 0, total: 300 });
+  });
+
+  it('barras por semana: una por semana del rango, también las vacías', () => {
+    const semanas = semanasEntre({ anio: 2026, semana: 37 }, { anio: 2026, semana: 41 });
+    const { porMes, items } = barrasDelRango(registros, semanas, { anio: 2026, semana: 41 });
+    expect(porMes).toBe(false);
+    expect(items.map((b) => [b.etiqueta, b.valor, b.actual])).toEqual([
+      ['Sem 37', 0, false], ['Sem 38', 8665, false], ['Sem 39', 10730, false], ['Sem 40', 8555, false], ['Sem 41', 6595, true],
+    ]);
+  });
+
+  it('barras por mes en rangos largos: cada semana entera en el mes de su jueves', () => {
+    const semanas = semanasEntre({ anio: 2026, semana: 1 }, { anio: 2026, semana: 41 });
+    const { porMes, items } = barrasDelRango(registros, semanas, { anio: 2026, semana: 41 });
+    expect(porMes).toBe(true);
+    expect(items).toHaveLength(10);
+    // Septiembre = semanas 36–39; la 40 (28 sep – 4 oct) cuenta completa en octubre.
+    expect(items.find((b) => b.clave === '2026-09').valor).toBe(8665 + 10730);
+    expect(items.find((b) => b.clave === '2026-10')).toMatchObject({ valor: 8555 + 6595, actual: true });
   });
 
   it('top ordena por total a pagar', () => {

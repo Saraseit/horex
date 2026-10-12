@@ -101,14 +101,20 @@ export const almacen = {
     return responder(conEmpleado(registro));
   },
 
-  eliminarRegistro(id, usuario) {
+  /** Borrado lógico de uno o varios registros. Todo o nada: si uno no se puede, no se borra ninguno. */
+  eliminarRegistros(ids, usuario) {
     try { exigirSupervisor(usuario); } catch (e) { return fallar(e.message); }
-    const r = estado.registros.find((x) => x.id === id && !x.eliminado_at);
-    if (!r) return fallar('El registro ya no existe.');
-    if (estaCerrada({ anio: r.anio_iso, semana: r.semana })) return fallar(`La semana ${r.semana} está cerrada: no se pueden eliminar registros.`);
-    r.eliminado_at = new Date().toISOString();
-    r.eliminado_por_nombre = usuario.nombre;
-    return responder({ id });
+    if (!ids.length) return fallar('No hay registros seleccionados.');
+    const lista = ids.map((id) => estado.registros.find((x) => x.id === id && !x.eliminado_at));
+    if (lista.some((r) => !r)) return fallar('Alguno de los registros ya no existe. Recarga e inténtalo de nuevo.');
+    const enCerrada = lista.find((r) => estaCerrada({ anio: r.anio_iso, semana: r.semana }));
+    if (enCerrada) return fallar(`La semana ${enCerrada.semana} está cerrada: no se pueden eliminar sus registros.`);
+    const ahora = new Date().toISOString();
+    for (const r of lista) {
+      r.eliminado_at = ahora;
+      r.eliminado_por_nombre = usuario.nombre;
+    }
+    return responder({ eliminados: lista.length });
   },
 
   cerrarSemana({ anio, semana }, usuario) {

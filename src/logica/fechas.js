@@ -60,6 +60,17 @@ export function semanasEntre(desde, hasta) {
   return lista;
 }
 
+/** Opciones de los selectores de semana: de la más antigua con datos hasta la actual, sin huecos. */
+export function semanasParaElegir(conDatos, actual, ...seleccionadas) {
+  const primera = [...conDatos, ...seleccionadas]
+    .filter((s) => compararSemanas(s, actual) <= 0)
+    .reduce((min, s) => (compararSemanas(s, min) < 0 ? s : min), actual);
+  return semanasEntre(primera, actual);
+}
+
+/** "Semana 41", o "Semana 52 · 2025" si es de otro año. */
+export const etiquetaSemana = (s, actual) => (s.anio === actual.anio ? `Semana ${s.semana}` : `Semana ${s.semana} · ${s.anio}`);
+
 export const esDomingo = (fecha) => !!fecha && parseD(fecha).getDay() === 0;
 /** 0 = lunes … 6 = domingo. */
 export const indiceDia = (fecha) => getISODay(parseD(fecha)) - 1;
@@ -72,8 +83,30 @@ export function rangoSemanaTexto(anio, semana) {
   return `${format(a, 'd MMM', { locale: es })} – ${format(b, 'd MMM', { locale: es })} ${format(b, 'yyyy')}`;
 }
 
-export const inicioDeMes = (fecha) => aISO(startOfMonth(parseD(fecha)));
-export const finDeMes = (fecha) => aISO(endOfMonth(parseD(fecha)));
+// Los rangos de reportes nunca cortan una semana: van del lunes de la primera al domingo de la última.
+export const domingoDeSemana = (anio, semana) => diasDeSemana(anio, semana)[6];
+
+/** Fechas que cubre un rango de semanas completas: { desde: lunes, hasta: domingo }. */
+export const fechasDeSemanas = (desde, hasta) => ({
+  desde: lunesDeSemana(desde.anio, desde.semana),
+  hasta: domingoDeSemana(hasta.anio, hasta.semana),
+});
+
+/**
+ * Mes al que pertenece una semana ('yyyy-MM'): el de su jueves, donde caen la mayoría de sus días.
+ * Es el mismo criterio con el que ISO decide a qué año pertenece una semana.
+ */
+export const mesDeSemana = ({ anio, semana }) => diasDeSemana(anio, semana)[3].slice(0, 7);
+
+/** Semanas completas de un mes: las que tienen su jueves en ese mes. { desde, hasta } */
+export function semanasDelMes(fecha) {
+  const primero = startOfMonth(parseD(fecha));
+  const ultimo = endOfMonth(parseD(fecha));
+  const primerJueves = addDays(primero, (4 - getISODay(primero) + 7) % 7);
+  const ultimoJueves = addDays(ultimo, -((getISODay(ultimo) - 4 + 7) % 7));
+  return { desde: semanaISO(aISO(primerJueves)), hasta: semanaISO(aISO(ultimoJueves)) };
+}
+
 export const mesAnterior = (fecha) => aISO(subMonths(startOfMonth(parseD(fecha)), 1));
 
 /** "Septiembre" */
