@@ -9,13 +9,18 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:api": "npm --prefix api run dev",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node servidor.js",
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "capturas:referencia": "node scripts/capturar-referencia.cjs"
+    "capturas:referencia": "node scripts/capturar-referencia.cjs",
+    "db:migrar": "node scripts/migrar.js",
+    "db:rol-api": "node scripts/crear-rol-api.js",
+    "db:semilla-demo": "node scripts/semilla-demo.js",
+    "db:crear-usuario": "node scripts/crear-usuario.js"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
@@ -35,6 +40,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.13.0",
+    "pg": "^8.23.1",
     "vite": "^8.3.4",
     "vitest": "^5.0.4"
   }
