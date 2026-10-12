@@ -1,33 +1,21 @@
-// Un caso por fila de la tabla de tarifas (docs/PROMPT_HOREX.md §5). calcular_tarifa en Postgres
-// (Fase 2) debe pasar exactamente los mismos casos.
+// Un caso por fila de la tabla de tarifas (docs/PROMPT_HOREX.md §5). calcular_tarifa en Postgres pasa
+// exactamente los mismos casos (src/logica/casosTarifa.js → db/pruebas/base.test.js).
 import { describe, expect, it } from 'vitest';
 import { PARAMETROS_PRUEBA, TIPOS_PRUEBA } from '../datos/datosPrueba.js';
+import { CASOS_TARIFA, FECHAS } from './casosTarifa.js';
 import { calcularTarifa, claseTipo, completarRegistro, notaRegla } from './reglas.js';
 
 const fijo = { id: 1, grupo: 'P. Fijo', genera_he: true };
 const eventual = { id: 2, grupo: 'Eventual', genera_he: true };
 const sinHE = { id: 3, grupo: 'P. Fijo', genera_he: false };
-const LUNES = '2026-10-05';
-const SABADO = '2026-10-10';
-const DOMINGO = '2026-10-11';
+const { LUNES, DOMINGO } = FECHAS;
 
 const tarifa = (empleado, fecha, tipoClave, parametros = PARAMETROS_PRUEBA) =>
   calcularTarifa({ empleado, fecha, tipoClave, tipos: TIPOS_PRUEBA, parametros });
 
 describe('calcularTarifa', () => {
-  it.each([
-    ['Normal local, entre semana, P. Fijo', fijo, LUNES, 'NORMAL_LOCAL', 60, null],
-    ['Normal foránea, sábado, Eventual', eventual, SABADO, 'NORMAL_FORANEA', 60, null],
-    ['Especial entre semana, P. Fijo', fijo, LUNES, 'ESPECIAL_LOCAL', 80, null],
-    ['Especial entre semana, Eventual (por confirmar: usa 80)', eventual, LUNES, 'ESPECIAL_FORANEA', 80, 'ESPECIAL_EVENTUAL_POR_CONFIRMAR'],
-    ['Domingo especial, P. Fijo', fijo, DOMINGO, 'ESPECIAL_LOCAL', 80, null],
-    ['Domingo especial, Eventual', eventual, DOMINGO, 'ESPECIAL_LOCAL', 70, 'DOMINGO_EVENTUAL'],
-    ['Muerta, P. Fijo', fijo, LUNES, 'MUERTA', 30, null],
-    ['Muerta, Eventual', eventual, LUNES, 'MUERTA', 30, null],
-    ['Muerta especial, P. Fijo', fijo, DOMINGO, 'MUERTA_ESPECIAL', 40, null],
-    ['Muerta especial, Eventual (por confirmar: usa 40)', eventual, LUNES, 'MUERTA_ESPECIAL', 40, 'MUERTA_ESPECIAL_EVENTUAL_POR_CONFIRMAR'],
-  ])('%s → $%i', (_, empleado, fecha, tipoClave, esperada, regla) => {
-    expect(tarifa(empleado, fecha, tipoClave)).toEqual({ tarifa: esperada, regla });
+  it.each(CASOS_TARIFA)('%s → $%i', (_, grupo, fecha, tipoClave, esperada, regla) => {
+    expect(tarifa(grupo === 'Eventual' ? eventual : fijo, fecha, tipoClave)).toEqual({ tarifa: esperada, regla });
   });
 
   it('el puesto sin horas extra siempre da 0', () => {
