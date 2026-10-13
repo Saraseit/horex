@@ -176,6 +176,30 @@ describe.skipIf(!URL_API || !CONTRASENA)('API de sesión (rama desarrollo)', () 
       expect(otraVez.estado).toBe(409);
     });
 
+    it('edición: sólo el supervisor; corrige horas y agrega una comida', async () => {
+      const { datos: empleados } = await json(supervisor, 'GET', '/empleados');
+      const fijo = empleados.find((e) => e.activo && e.genera_he && e.grupo === 'P. Fijo');
+      const { datos: r } = await json(supervisor, 'POST', '/registros', { empleado_id: fijo.id, fecha: '2026-10-06', tipo_clave: 'NORMAL_LOCAL', horas: 1 });
+      const cambios = { fecha: '2026-10-06', tipo_clave: 'NORMAL_LOCAL', horas: 2.5, desayuno: false, almuerzo: false, cena: true };
+      expect((await json(capturista, 'PATCH', `/registros/${r.id}`, cambios)).estado).toBe(403);
+      const editado = await json(supervisor, 'PATCH', `/registros/${r.id}`, cambios);
+      expect(editado.estado).toBe(200);
+      expect(editado.datos).toMatchObject({ id: r.id, horas: 2.5, tarifa_aplicada: 60, importe_he: 150, cena: true });
+      expect(editado.datos.editado_at).toBeTruthy();
+      expect((await json(capturista, 'GET', `/registros/${r.id}`)).datos.horas).toBe(2.5);
+      await json(supervisor, 'POST', '/registros/eliminar', { ids: [r.id] });
+      expect((await json(supervisor, 'GET', `/registros/${r.id}`)).estado).toBe(404);
+    });
+
+    it('registro de sólo comida para quien sí genera horas extra', async () => {
+      const { datos: empleados } = await json(supervisor, 'GET', '/empleados');
+      const fijo = empleados.find((e) => e.activo && e.genera_he);
+      const { estado, datos } = await json(capturista, 'POST', '/registros', { empleado_id: fijo.id, fecha: '2026-10-06', tipo_clave: null, horas: 0, almuerzo: true });
+      expect(estado).toBe(201);
+      expect(datos).toMatchObject({ tipo_clave: null, horas: 0, tipo_etiqueta: 'Solo alimentos', almuerzo: true });
+      await json(supervisor, 'POST', '/registros/eliminar', { ids: [datos.id] });
+    });
+
     it('rechazos de la base llegan con su mensaje', async () => {
       const { datos: empleados } = await json(supervisor, 'GET', '/empleados');
       const fijo = empleados.find((e) => e.activo && e.genera_he);

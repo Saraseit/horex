@@ -139,6 +139,37 @@ export function rutasDatos(bd) {
     });
   }));
 
+  // Va después de /registros/recientes, /semanas y /conteos para no confundirlas con un id.
+  r.get('/registros/:id', envolver(async (req, res) => {
+    const id = entero(req.params.id, 'Registro');
+    const fila = await como(req, async (c) => (await c.query('select * from v_registros where id = $1', [id])).rows[0]);
+    if (!fila) throw new ErrorHttp(404, 'El registro no existe o fue eliminado.');
+    res.json(fila);
+  }));
+
+  // Edición (sólo supervisor): fecha, tipo, horas, comidas y tarifa manual. El empleado no cambia.
+  r.patch('/registros/:id', envolver(async (req, res) => {
+    exigirSupervisor(req);
+    const id = entero(req.params.id, 'Registro');
+    const d = req.body ?? {};
+    if (!FECHA.test(d.fecha ?? '')) throw new ErrorHttp(400, 'Fecha no válida.');
+    const horas = Number(d.horas ?? 0);
+    if (!Number.isFinite(horas) || horas < 0 || horas > 16) throw new ErrorHttp(400, 'Las horas deben estar entre 0 y 16.');
+    const manual = !!d.tarifa_manual;
+    const fila = await como(req, async (c) => {
+      const { rowCount } = await c.query(
+        `update registros_horas set fecha = $2, tipo_clave = $3, horas = $4, tarifa_aplicada = $5, tarifa_manual = $6,
+           nota = $7, desayuno = $8, almuerzo = $9, cena = $10
+         where id = $1 and eliminado_at is null`,
+        [id, d.fecha, d.tipo_clave || null, d.tipo_clave ? horas : 0, manual ? monto(d.tarifa_aplicada, 'Tarifa') : 0, manual,
+          manual ? String(d.nota ?? '').trim() : null, !!d.desayuno, !!d.almuerzo, !!d.cena],
+      );
+      if (!rowCount) throw new ErrorHttp(404, 'El registro no existe o fue eliminado.');
+      return (await c.query('select * from v_registros where id = $1', [id])).rows[0];
+    });
+    res.json(fila);
+  }));
+
   r.post('/registros', envolver(async (req, res) => {
     const d = req.body ?? {};
     if (!FECHA.test(d.fecha ?? '')) throw new ErrorHttp(400, 'Fecha no válida.');
