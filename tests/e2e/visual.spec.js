@@ -25,6 +25,8 @@ const ANCHOS = [1366, 400];
 // npx playwright test tests/e2e/visual.spec.js --update-snapshots=all -g "<vista> <ancho>px"
 const DIFERENCIAS_APROBADAS = [
   'exportar-1366', 'exportar-400', 'periodo-1366', 'periodo-400',
+  // Captura de la semana pasada, sólo comida y edición (primera versión operativa).
+  'registrar-1366', 'registrar-400',
   // Comidas por separado, casillas y recibos (pedido del usuario, 13 oct 2026).
   'semana-1366', 'semana-400', 'semana-1366-supervisor', 'semana-400-supervisor',
   'empleado-1366', 'empleado-400',

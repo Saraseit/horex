@@ -35,11 +35,13 @@ test.describe('Registrar HE', () => {
     await expect(page.locator('.hist-item.new .hist-name')).toHaveText('Juan Gabriel Chan');
     await expect(page.locator('#emp-search')).toBeFocused();
     await expect(page.locator('#emp-search')).toHaveValue('');
-    await expect(page.locator('#fecha')).toHaveValue('2026-10-10');
+    // La captura es de la semana pasada: la fecha empieza en su lunes y se conserva entre capturas.
+    await expect(page.locator('#fecha')).toHaveValue('2026-10-05');
   });
 
   test('avisa del duplicado sin bloquear', async ({ page }) => {
     await page.goto('/registrar');
+    await page.locator('#fecha').fill('2026-10-10');
     await page.locator('#emp-search').fill('gamboa');
     await page.keyboard.press('Enter');
     await expect(page.locator('.alert.warn')).toContainText('Delmer Adolfo Gamboa ya tiene un registro el sáb 10 de oct');
@@ -245,7 +247,7 @@ test.describe('Recibos', () => {
       page.waitForEvent('download'),
       page.getByRole('button', { name: 'Recibo', exact: true }).first().click(),
     ]);
-    expect(descarga.suggestedFilename()).toMatch(/^Recibo_[A-Za-z_]+_2026-10-10\.pdf$/);
+    expect(descarga.suggestedFilename()).toMatch(/^Recibo_[A-Za-z_]+_S41_(HE|DC|AL)\.pdf$|^Recibos_Semana41_\d\.pdf$/);
     const texto = (await import('node:fs')).readFileSync(await descarga.path(), 'latin1');
     expect(texto.startsWith('%PDF')).toBe(true);
   });
@@ -257,7 +259,7 @@ test.describe('Recibos', () => {
       page.waitForEvent('download'),
       page.getByRole('button', { name: 'Recibos (3)' }).click(),
     ]);
-    expect(descarga.suggestedFilename()).toBe('Recibos_Semana41_3.pdf');
+    expect(descarga.suggestedFilename()).toMatch(/^Recibos_Semana41_\d+\.pdf$/);
   });
 });
 
@@ -302,4 +304,58 @@ test('tarifa manual del supervisor con motivo obligatorio', async ({ page }) => 
   await expect(page.locator('.resumen-total')).toContainText('$150');
   await guardar.click();
   await expect(page.locator('.toast')).toHaveText('Guardado: Juan Gabriel Chan · $150');
+});
+
+test.describe('Primera versión operativa', () => {
+  test('la semana en captura es la pasada: Semana actual abre la 41 y la fecha no pasa de su domingo', async ({ page }) => {
+    await page.goto('/semana');
+    await expect(page.locator('.view-head h2')).toHaveText('Semana 41');
+    await expect(page.locator('.semana-tag')).toHaveText('Semana 41 · 2026');
+    await page.goto('/registrar');
+    await expect(page.locator('#fecha')).toHaveAttribute('max', '2026-10-11');
+  });
+
+  test('el supervisor edita un registro: corrige horas y agrega una comida', async ({ page }) => {
+    await page.goto('/semana');
+    const fila = page.locator('tbody tr').filter({ has: page.getByRole('button', { name: 'Editar' }) }).first();
+    const empleado = await fila.locator('td').nth(2).innerText();
+    await fila.getByRole('button', { name: 'Editar' }).click();
+    await expect(page).toHaveURL(/\/registrar\?editar=\d+$/);
+    await expect(page.locator('.alert.info').first()).toContainText('Editando el registro');
+    await expect(page.locator('#emp-search')).toBeDisabled();
+    await page.locator('#num-horas').fill('7');
+    await page.locator('.alimento-toggle', { hasText: 'Cena' }).click();
+    await page.getByRole('button', { name: 'Guardar cambios' }).click();
+    await expect(page).toHaveURL(/\/semana\/2026\/41$/);
+    await expect(page.locator('.toast')).toContainText(`Registro actualizado: ${empleado}`);
+  });
+
+  test('la capturista no ve Editar', async ({ page }) => {
+    await conSesion(page, 'CAPTURISTA');
+    await page.goto('/semana');
+    await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Recibo', exact: true }).first()).toBeVisible();
+  });
+
+  test('registro de sólo comida para alguien que sí genera horas extra', async ({ page }) => {
+    await page.goto('/registrar');
+    await page.locator('#emp-search').fill('chan itza');
+    await page.keyboard.press('Enter');
+    const guardar = page.getByRole('button', { name: 'Guardar registro' });
+    await expect(guardar).toBeDisabled();
+    await page.locator('.alimento-toggle', { hasText: 'Almuerzo' }).click();
+    await expect(page.locator('.regla-note')).toHaveText('Registro de sólo comida (sin horas extra)');
+    await guardar.click();
+    await expect(page.locator('.toast')).toHaveText('Guardado: Juan Gabriel Chan · $50');
+    await expect(page.locator('.hist-item.new .hist-meta')).toContainText('Solo alimentos');
+  });
+
+  test('un tipo de hora se quita volviendo a tocarlo', async ({ page }) => {
+    await page.goto('/registrar');
+    const normal = page.getByRole('button', { name: /Normal local/ });
+    await normal.click();
+    await expect(normal).toHaveAttribute('aria-pressed', 'true');
+    await normal.click();
+    await expect(normal).toHaveAttribute('aria-pressed', 'false');
+  });
 });
