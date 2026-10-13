@@ -91,8 +91,8 @@ test.describe('Semana actual', () => {
     await page.getByRole('button', { name: 'Cerrar semana' }).click();
     await page.getByRole('button', { name: 'Sí' }).click();
     await expect(page.locator('.view-head .badge')).toHaveText('Cerrada · pagada');
-    await expect(page.getByRole('button', { name: 'Eliminar', exact: true })).toHaveCount(0);
-    await expect(page.locator('.casilla')).toHaveCount(0);
+    // El supervisor puede eliminar cualquier registro, también con la semana cerrada.
+    await expect(page.getByRole('button', { name: 'Eliminar', exact: true }).first()).toBeVisible();
   });
 
   test('la capturista ve las acciones deshabilitadas', async ({ page }) => {
@@ -141,29 +141,35 @@ test.describe('Borrado masivo', () => {
     await expect(page.getByRole('button', { name: /Eliminar seleccionados/ })).toBeDisabled();
   });
 
-  test('en una semana cerrada no hay casillas', async ({ page }) => {
+  test('el supervisor también elimina en una semana cerrada', async ({ page }) => {
     await comoRol(page, 'SUPERVISOR');
     await page.goto('/semana/2026/40');
     await expect(page.locator('.view-head .badge')).toHaveText('Cerrada · pagada');
-    await expect(page.locator('.casilla')).toHaveCount(0);
+    const antes = await page.locator('tbody .casilla').count();
+    await page.locator('tbody .casilla').first().check();
+    await page.getByRole('button', { name: 'Eliminar seleccionados (1)' }).click();
+    await page.getByRole('button', { name: 'Sí' }).click();
+    await expect(page.locator('.toast')).toHaveText('Registro eliminado');
+    await expect(page.locator('tbody .casilla')).toHaveCount(antes - 1);
   });
 
-  test('la capturista no ve casillas', async ({ page }) => {
+  test('la capturista marca registros para recibos pero no puede eliminar', async ({ page }) => {
     await comoRol(page, 'CAPTURISTA');
     await page.goto('/semana');
     await expect(page.locator('.kpi').first()).toContainText('29 registros');
-    await expect(page.locator('.casilla')).toHaveCount(0);
+    await page.locator('tbody .casilla').first().check();
+    await expect(page.getByRole('button', { name: 'Recibos (1)' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: /Eliminar/ })).toHaveCount(0);
   });
 
-  test('en Por empleado sólo se marcan registros de semanas abiertas', async ({ page }) => {
+  test('en Por empleado el supervisor elimina cualquier registro', async ({ page }) => {
     await comoRol(page, 'SUPERVISOR');
     await page.goto('/reportes/empleado/5');
-    await expect(page.locator('tbody .casilla:disabled').first()).toHaveAttribute('title', 'Semana cerrada: no se puede eliminar');
+    await expect(page.locator('.kpi').nth(1)).toContainText('11 registros');
     await page.getByLabel('Seleccionar todos').check();
-    await page.getByRole('button', { name: 'Eliminar seleccionados (3)' }).click();
+    await page.getByRole('button', { name: 'Eliminar seleccionados (11)' }).click();
     await page.getByRole('button', { name: 'Sí' }).click();
-    await expect(page.locator('.toast')).toHaveText('3 registros eliminados');
-    await expect(page.locator('.kpi').nth(1)).toContainText('8 registros');
+    await expect(page.locator('.toast')).toHaveText('11 registros eliminados');
   });
 });
 
@@ -208,7 +214,7 @@ test('cambiar una tarifa no recalcula registros guardados', async ({ page }) => 
   await comoRol(page, 'SUPERVISOR');
   await page.goto('/catalogos/tarifas');
   await page.getByLabel('Tarifa Normal local').fill('65');
-  await page.getByRole('button', { name: 'Guardar cambios' }).click();
+  await page.getByRole('button', { name: 'Guardar cambios' }).first().click();
   await expect(page.locator('.toast')).toHaveText('1 tarifa actualizada · aplica a capturas nuevas');
 
   await page.locator('.sidebar').getByRole('button', { name: /Registrar HE/ }).click();
@@ -229,4 +235,71 @@ test('alta de empleado rechaza nombres duplicados sin importar acentos', async (
   await page.getByRole('button', { name: 'Guardar empleado' }).click();
   await expect(page.locator('.toast')).toHaveText('Alta: Pedro Prueba Uc');
   await expect(page.locator('.view-head p')).toHaveText('26 activos · 2 inactivos · 5 eventuales');
+});
+
+test.describe('Recibos', () => {
+  test('un recibo por registro con la fecha de pago elegida', async ({ page }) => {
+    await page.goto('/semana');
+    await page.getByLabel('Fecha de pago').fill('2026-10-16');
+    const [descarga] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Recibo', exact: true }).first().click(),
+    ]);
+    expect(descarga.suggestedFilename()).toMatch(/^Recibo_[A-Za-z_]+_2026-10-10\.pdf$/);
+    const texto = (await import('node:fs')).readFileSync(await descarga.path(), 'latin1');
+    expect(texto.startsWith('%PDF')).toBe(true);
+  });
+
+  test('recibos de varios registros en un solo PDF', async ({ page }) => {
+    await page.goto('/semana');
+    for (const i of [0, 1, 2]) await page.locator('tbody .casilla').nth(i).check();
+    const [descarga] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Recibos (3)' }).click(),
+    ]);
+    expect(descarga.suggestedFilename()).toBe('Recibos_Semana41_3.pdf');
+  });
+});
+
+test.describe('Comidas por separado', () => {
+  test('cada comida con su monto: se cambia en Tarifas y se usa al capturar', async ({ page }) => {
+    await page.goto('/catalogos/tarifas');
+    await page.getByLabel('Monto Cena').fill('70');
+    await page.getByLabel('Monto Desayuno').fill('60');
+    await page.getByRole('button', { name: 'Guardar cambios' }).nth(1).click();
+    await expect(page.locator('.toast')).toHaveText('2 montos actualizados · aplica a capturas nuevas');
+
+    await page.locator('.sidebar').getByRole('button', { name: /Registrar HE/ }).click();
+    await expect(page.locator('.alimento-toggle', { hasText: 'Cena' })).toContainText('$70');
+    await page.locator('#emp-search').fill('echeverria');
+    await page.keyboard.press('Enter');
+    await page.locator('.alimento-toggle', { hasText: 'Desayuno' }).click();
+    await page.locator('.alimento-toggle', { hasText: 'Cena' }).click();
+    await expect(page.locator('.resumen-total')).toContainText('$130');
+    await page.getByRole('button', { name: 'Guardar registro' }).click();
+    await expect(page.locator('.toast')).toHaveText('Guardado: Eric de Jesus · $130');
+  });
+
+  test('la semana muestra desayunos, almuerzos y cenas con cantidad y monto', async ({ page }) => {
+    await page.goto('/semana');
+    await expect(page.locator('.kpi').nth(2)).toContainText(/Des\. \d+ · Alm\. \d+ · Cena \d+/);
+    const encabezados = page.locator('.tbl').first().locator('thead th');
+    await expect(encabezados.filter({ hasText: /^(Desayuno|Almuerzo|Cena)$/ })).toHaveCount(3);
+  });
+});
+
+test('tarifa manual del supervisor con motivo obligatorio', async ({ page }) => {
+  await page.goto('/registrar');
+  await page.locator('#emp-search').fill('chan itza');
+  await page.keyboard.press('Enter');
+  await page.locator('#num-horas').fill('2');
+  await page.getByRole('button', { name: /Normal local/ }).click();
+  await page.getByRole('button', { name: 'Usar tarifa manual…' }).click();
+  await page.getByLabel('Tarifa manual ($/hr)').fill('75');
+  const guardar = page.getByRole('button', { name: 'Guardar registro' });
+  await expect(guardar).toBeDisabled();
+  await page.getByLabel(/Motivo/).fill('Acordado con operaciones');
+  await expect(page.locator('.resumen-total')).toContainText('$150');
+  await guardar.click();
+  await expect(page.locator('.toast')).toHaveText('Guardado: Juan Gabriel Chan · $150');
 });

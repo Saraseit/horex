@@ -24,8 +24,12 @@ const ANCHOS = [1366, 400];
 // una captura aprobada de la app (prefijo "app-"). Si cambian otra vez, revisarlas a ojo y regenerarlas con
 // npx playwright test tests/e2e/visual.spec.js --update-snapshots=all -g "<vista> <ancho>px"
 const DIFERENCIAS_APROBADAS = [
-  'exportar-1366', 'exportar-400', 'empleado-400', 'tarifas-400', 'periodo-1366', 'periodo-400',
-  'semana-1366-supervisor', 'semana-400-supervisor',
+  'exportar-1366', 'exportar-400', 'periodo-1366', 'periodo-400',
+  // Comidas por separado, casillas y recibos (pedido del usuario, 13 oct 2026).
+  'semana-1366', 'semana-400', 'semana-1366-supervisor', 'semana-400-supervisor',
+  'empleado-1366', 'empleado-400',
+  // Montos de comidas editables.
+  'tarifas-1366', 'tarifas-400', 'tarifas-1366-supervisor', 'tarifas-400-supervisor',
 ];
 
 // Inicio de sesión: pantalla nueva (no está en la demo), comparada contra capturas aprobadas.
