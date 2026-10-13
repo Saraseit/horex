@@ -167,9 +167,19 @@ variantes de supervisor de Semana, Empleados y Tarifas (34 en total). Se regener
   capturarlo. Tablas, reportes, historial y exportación muestran cantidad y monto de cada comida.
 - **El supervisor puede eliminar cualquier registro**, también de semanas cerradas (pedido del usuario; el
   prompt original no lo permitía). Una semana cerrada sigue sin aceptar capturas nuevas.
-- **Recibos para firmar:** cada registro genera un recibo PDF (dos por hoja carta) con el nombre, la fecha de
-  pago (se captura arriba de la tabla), la semana de trabajo, cada concepto con su importe y la línea de firma.
-  Se descargan por fila o de los registros marcados, en Semana actual y Por empleado; cualquier usuario puede.
+- **Se captura la semana pasada** (primera versión operativa): en la semana 42 se captura y se paga lo
+  trabajado en la 41. Esa "semana en captura" es la que abre Semana actual, la del encabezado y la base de los
+  reportes; en Registrar HE la fecha empieza en su lunes y no pasa de su domingo (`semanaCaptura()`).
+- **Recibos para firmar, por cuenta:** se generan de los registros marcados (o de uno con su botón) y se agrupan
+  por empleado, semana y cuenta. Hay tres cuentas que se pagan por separado: horas extra; desayuno y cena;
+  almuerzo. Quien cobra las tres firma tres recibos. Cada recibo lista sus registros (fecha, concepto, importe),
+  lleva fecha de pago, semana de trabajo, total y firma. Van dos por hoja carta si tienen hasta 8 líneas; si no,
+  hoja completa.
+- **Edición de registros** (sólo supervisor, migración 0005): fecha, tipo, horas, comidas y tarifa manual. El
+  empleado no cambia (se elimina y se recaptura). La tarifa se recalcula sólo si cambia el tipo o la fecha; las
+  comidas conservan el monto con que se capturaron. Queda quién editó y cuándo (`editado_por`, `editado_at`).
+- **Registro de sólo comida** para cualquier empleado: sin horas ni tipo y con al menos una comida. Un tipo de
+  hora se quita volviendo a tocarlo.
 - **Plantilla real:** `db/semilla.sql` tiene los 38 empleados únicos de `empleadosactivos horex.pdf` con
   nombres y puestos homogéneos ("Operador cargador", no "OPERADO CARGADOR"). Duplicados unidos: Erik/Erick Nah
   Chan, Isac/Isaac Cante Baak, Galue Cetina (dos formas), May Cerantes/Cervantes, Yahir Nah Molina (dos formas),
