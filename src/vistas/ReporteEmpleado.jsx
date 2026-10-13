@@ -1,6 +1,6 @@
+import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import Alimentos from '../componentes/Alimentos.jsx';
-import BorradoMasivo from '../componentes/BorradoMasivo.jsx';
+import AccionesRegistros from '../componentes/AccionesRegistros.jsx';
 import BarrasHorizontales from '../componentes/BarrasHorizontales.jsx';
 import BarrasVerticales from '../componentes/BarrasVerticales.jsx';
 import Cargando from '../componentes/Cargando.jsx';
@@ -8,19 +8,21 @@ import EncabezadoVista from '../componentes/EncabezadoVista.jsx';
 import FilaKpis from '../componentes/FilaKpis.jsx';
 import Insignia from '../componentes/Insignia.jsx';
 import Kpi from '../componentes/Kpi.jsx';
+import MontoComida from '../componentes/MontoComida.jsx';
 import PildoraTipo from '../componentes/PildoraTipo.jsx';
 import Segmentado from '../componentes/Segmentado.jsx';
 import Tabla from '../componentes/Tabla.jsx';
 import Tarjeta from '../componentes/Tarjeta.jsx';
 import { columnaSeleccion, useSeleccion } from '../componentes/seleccion.jsx';
+import { useRecibos } from '../componentes/useRecibos.js';
 import { useToast } from '../componentes/useToast.js';
 import {
-  useConteos, useEliminarRegistros, useEmpleados, useRegistrosEmpleado, useSemanasCerradas, useTipos,
+  useConteos, useEliminarRegistros, useEmpleados, useRegistrosEmpleado, useTipos,
 } from '../datos/consultas.js';
 import { barrasDelRango, domingos, porTipo, sumar } from '../logica/agregados.js';
 import { desplazarSemana, fechasDeSemanas, hoy, semanaISO, semanasEntre } from '../logica/fechas.js';
-import { fechaLarga, fmtHoras, fmtMoneda, fmtTarifa, siNo } from '../logica/formato.js';
-import { etiquetaTipo } from '../logica/reglas.js';
+import { fechaLarga, fmtHoras, fmtMoneda, fmtTarifa, resumenComidas, siNo } from '../logica/formato.js';
+import { COMIDAS, etiquetaTipo } from '../logica/reglas.js';
 import { useSesion } from '../sesion/contexto.js';
 
 const RANGOS = [
@@ -53,18 +55,19 @@ export default function ReporteEmpleado() {
   const { esSupervisor } = useSesion();
   const marcados = useSeleccion();
   const eliminar = useEliminarRegistros();
+  const recibos = useRecibos();
+  const [fechaPago, setFechaPago] = useState(hoy());
 
   const empleadosQ = useEmpleados();
   const conteosQ = useConteos();
   const tiposQ = useTipos();
-  const cerradasQ = useSemanasCerradas();
   const conRegistros = (empleadosQ.data ?? [])
     .filter((e) => conteosQ.data?.porEmpleado[e.id] > 0)
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   const empleadoId = id ? Number(id) : conRegistros[0]?.id;
   const registrosQ = useRegistrosEmpleado(empleadoId, desde, hasta);
 
-  const base = [empleadosQ, conteosQ, tiposQ, cerradasQ];
+  const base = [empleadosQ, conteosQ, tiposQ];
   if (base.some((q) => q.isPending)) return <Cargando error={base.find((q) => q.error)?.error} />;
   const empleado = empleadosQ.data.find((e) => e.id === empleadoId);
   if (!empleado) {
@@ -84,12 +87,10 @@ export default function ReporteEmpleado() {
 
   const barras = barrasDelRango(regs, semanas, actual);
 
-  // Borrado masivo: sólo el supervisor y sólo registros de semanas abiertas.
-  const cerrada = (r) => cerradasQ.data.some((c) => c.anio_iso === r.anio_iso && c.semana === r.semana);
-  const elegibles = esSupervisor ? regs.filter((r) => !cerrada(r)).map((r) => r.id) : [];
-  const cuantosMarcados = elegibles.filter((rid) => marcados.tiene(rid)).length;
-  function eliminarMarcados() {
-    eliminar.mutate(elegibles.filter((rid) => marcados.tiene(rid)), {
+  // Casillas: recibos para cualquiera; eliminar, sólo el supervisor (también en semanas cerradas).
+  const seleccionados = regs.filter((r) => marcados.tiene(r.id));
+  function eliminarMarcados(ids) {
+    eliminar.mutate(ids, {
       onSuccess: ({ eliminados: n }) => {
         toast(n === 1 ? 'Registro eliminado' : `${n} registros eliminados`);
         marcados.limpiar();
@@ -116,12 +117,23 @@ export default function ReporteEmpleado() {
     { id: 'horas', encabezado: 'Horas', tipo: 'num', celda: (r) => r.horas || '—' },
     { id: 'tarifa', encabezado: 'Tarifa', tipo: 'num', celda: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—') },
     { id: 'he', encabezado: 'Importe HE', tipo: 'num', celda: (r) => fmtMoneda(r.importe_he) },
-    { id: 'alim', encabezado: 'Alim.', tipo: 'ctr', celda: (r) => <Alimentos registro={r} /> },
+    ...COMIDAS.map((c) => ({
+      id: c.clave,
+      encabezado: c.etiqueta,
+      tipo: 'num',
+      celda: (r) => (r[c.clave] ? fmtMoneda(r[`importe_${c.clave}`]) : <span className="faint">—</span>),
+    })),
     { id: 'total', encabezado: 'Total', tipo: 'num', celda: (r) => <b>{fmtMoneda(r.total)}</b> },
+    {
+      id: 'recibo',
+      encabezado: '',
+      estiloCelda: { textAlign: 'right' },
+      celda: (r) => (
+        <button type="button" className="btn btn-ghost btn-xs" disabled={recibos.generando} onClick={() => recibos.descargar([r], fechaPago)}>Recibo</button>
+      ),
+    },
   ];
-  const columnas = esSupervisor
-    ? [columnaSeleccion({ seleccion: marcados, elegibles, motivoBloqueo: () => 'Semana cerrada: no se puede eliminar' }), ...columnasBase]
-    : columnasBase;
+  const columnas = [columnaSeleccion({ seleccion: marcados, elegibles: regs.map((r) => r.id) }), ...columnasBase];
 
   return (
     <section className="view">
@@ -147,7 +159,7 @@ export default function ReporteEmpleado() {
         <Kpi etiqueta="Horas extra" valor={fmtHoras(s.horas)} sub={descripcion} />
         <Kpi etiqueta="Importe HE" valor={fmtMoneda(s.he)} sub={`${s.registros} registros`} />
         <Kpi etiqueta="Promedio semanal" valor={fmtMoneda(s.total / semanas.length)} sub={`${domingos(regs).length} domingos trabajados`} />
-        <Kpi etiqueta="Total acumulado" valor={fmtMoneda(s.total)} sub={`Alimentos ${fmtMoneda(s.alim)}`} hero />
+        <Kpi etiqueta="Total acumulado" valor={fmtMoneda(s.total)} sub={`Alimentos ${fmtMoneda(s.alim)} · ${resumenComidas(s)}`} hero />
       </FilaKpis>
 
       <div className="grid-3-1">
@@ -159,34 +171,53 @@ export default function ReporteEmpleado() {
         >
           <BarrasVerticales items={barras.items} formato={fmtMoneda} />
         </Tarjeta>
-        <Tarjeta titulo="Horas por tipo">
-          <BarrasHorizontales
-            filas={horasPorTipo}
-            estiloFila={{ gridTemplateColumns: '110px 1fr auto' }}
-            vacio={<div className="faint">Sin horas extra (solo alimentos)</div>}
-          />
-        </Tarjeta>
+        <div className="stack" style={{ gap: 20 }}>
+          <Tarjeta titulo="Horas por tipo">
+            <BarrasHorizontales
+              filas={horasPorTipo}
+              estiloFila={{ gridTemplateColumns: '110px 1fr auto' }}
+              vacio={<div className="faint">Sin horas extra (solo alimentos)</div>}
+            />
+          </Tarjeta>
+          <Tarjeta titulo="Alimentos" subtitulo="Cantidad y monto de cada comida">
+            <div className="rule-list">
+              {COMIDAS.map((c) => (
+                <div key={c.clave} className="rule"><span>{c.plural} ({s[c.cantidad]})</span><b>{fmtMoneda(s[c.importe])}</b></div>
+              ))}
+              <div className="rule"><span>Total alimentos</span><b>{fmtMoneda(s.alim)}</b></div>
+            </div>
+          </Tarjeta>
+        </div>
       </div>
 
       <Tarjeta
         titulo="Historial de registros"
         conCuerpo={false}
-        accion={esSupervisor && (
-          <BorradoMasivo cantidad={cuantosMarcados} ocupado={eliminar.isPending} alConfirmar={eliminarMarcados} />
+        accion={(
+          <AccionesRegistros
+            marcados={seleccionados}
+            fechaPago={fechaPago}
+            alCambiarFecha={setFechaPago}
+            puedeBorrar={esSupervisor}
+            alEliminar={eliminarMarcados}
+            eliminando={eliminar.isPending}
+          />
         )}
       >
         <Tabla
           columnas={columnas}
           filas={regs}
           clave={(r) => r.id}
+          compacta
           claseFila={(r) => (marcados.tiene(r.id) ? 'seleccionada' : undefined)}
           pie={<>
             <td colSpan={columnas.length - columnasBase.length + 3}>Total</td>
             <td className="num">{fmtHoras(s.horas)}</td>
             <td />
             <td className="num">{fmtMoneda(s.he)}</td>
-            <td className="num">{fmtMoneda(s.alim)}</td>
+            {COMIDAS.map((c) => <td key={c.clave} className="num"><MontoComida monto={s[c.importe]} cantidad={s[c.cantidad]} /></td>)}
             <td className="num">{fmtMoneda(s.total)}</td>
+            <td />
           </>}
         />
       </Tarjeta>

@@ -7,10 +7,10 @@ const valor = (v, fila) => (typeof v === 'function' ? v(fila) : v);
  * pie: celdas <td> de la fila de totales. alClicFila convierte las filas en .clickable.
  * claseFila(fila) agrega clases a la fila (p. ej. "seleccionada").
  */
-export default function Tabla({ columnas, filas, clave, pie, alClicFila, claseFila, estiloFila, vacio, estiloWrap }) {
+export default function Tabla({ columnas, filas, clave, pie, alClicFila, claseFila, estiloFila, vacio, estiloWrap, compacta }) {
   return (
     <div className="tbl-wrap" style={estiloWrap}>
-      <table className="tbl">
+      <table className={compacta ? 'tbl compacta' : 'tbl'}>
         <thead>
           <tr>{columnas.map((c) => <th key={c.id} className={unir(c.tipo, c.claseEncabezado)}>{c.encabezado}</th>)}</tr>
         </thead>

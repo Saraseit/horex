@@ -44,7 +44,8 @@ export const TIPOS_PRUEBA = [
   { clave: 'MUERTA_ESPECIAL', etiqueta: 'Muerta especial', tarifa: 40, descripcion: 'Mitad de la tarifa especial', orden: 6 },
 ];
 
-export const PARAMETROS_PRUEBA = { monto_alimento: 50, tarifa_domingo_eventual: 70 };
+// La demo paga todas las comidas a $50.
+export const PARAMETROS_PRUEBA = { monto_desayuno: 50, monto_almuerzo: 50, monto_cena: 50, tarifa_domingo_eventual: 70 };
 
 export const USUARIO_PRUEBA = { id: 'usuario-prueba', nombre: 'Mirian Dzul' };
 
@@ -75,7 +76,8 @@ export function generarRegistrosPrueba() {
   const registros = [];
   const agregar = (o) => registros.push({
     id: registros.length + 1, desayuno: false, almuerzo: false, cena: false,
-    monto_alimento: PARAMETROS_PRUEBA.monto_alimento, capturado_por_nombre: USUARIO_PRUEBA.nombre, ...o,
+    monto_desayuno: PARAMETROS_PRUEBA.monto_desayuno, monto_almuerzo: PARAMETROS_PRUEBA.monto_almuerzo,
+    monto_cena: PARAMETROS_PRUEBA.monto_cena, capturado_por_nombre: USUARIO_PRUEBA.nombre, ...o,
   });
 
   const oper = EMPLEADOS_PRUEBA.filter((e) => e.activo && e.genera_he && !['Encargada de nómina', 'Auxiliar de compras'].includes(e.puesto));

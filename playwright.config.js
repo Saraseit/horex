@@ -17,7 +17,8 @@ export default defineConfig({
     toHaveScreenshot: { animations: 'disabled', maxDiffPixelRatio: 0.01 },
   },
   webServer: {
-    command: 'npm run build && npm run preview',
+    // Modo de prueba: datos de la demo en memoria y "hoy" fijo (src/configuracion.js); la API se simula.
+    command: 'npm run build:prueba && npm run preview:prueba',
     url: 'http://localhost:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Cargando from '../componentes/Cargando.jsx';
+import { descargarArchivo } from '../componentes/descargar.js';
 import EncabezadoVista from '../componentes/EncabezadoVista.jsx';
 import Segmentado from '../componentes/Segmentado.jsx';
 import { useToast } from '../componentes/useToast.js';
@@ -13,15 +14,6 @@ import { fmtMoneda, plural } from '../logica/formato.js';
 
 const FILAS_VISTA_PREVIA = 40;
 const CLAVE_VALIDA = /^\d{4}-\d{1,2}$/;
-
-function descargarArchivo(contenido, nombre, tipo) {
-  const url = URL.createObjectURL(new Blob([contenido], { type: tipo }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = nombre;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 export default function Exportar() {
   const toast = useToast();

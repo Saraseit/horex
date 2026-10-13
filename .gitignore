@@ -1,8 +1,10 @@
 node_modules/
 dist/
+dist-prueba/
 .env
 .env.*
 !.env.example
+!.env.prueba
 
 # Pruebas
 test-results/

@@ -4,8 +4,10 @@ import { claveSemana, compararSemanas, esDomingo, indiceDia, mesCorto, mesDeSema
 /** Con más semanas que esto, la gráfica de totales se agrupa por mes. */
 export const MAXIMO_BARRAS_SEMANALES = 13;
 
+// desayunos/almuerzos/cenas = cantidad; impDesayunos/impAlmuerzos/impCenas = monto.
 const vacio = () => ({
-  registros: 0, horas: 0, he: 0, alim: 0, total: 0, comidas: 0, desayunos: 0, almuerzos: 0, cenas: 0,
+  registros: 0, horas: 0, he: 0, alim: 0, total: 0, comidas: 0,
+  desayunos: 0, almuerzos: 0, cenas: 0, impDesayunos: 0, impAlmuerzos: 0, impCenas: 0,
 });
 
 export function sumar(regs) {
@@ -18,6 +20,9 @@ export function sumar(regs) {
     a.desayunos += r.desayuno ? 1 : 0;
     a.almuerzos += r.almuerzo ? 1 : 0;
     a.cenas += r.cena ? 1 : 0;
+    a.impDesayunos += Number(r.importe_desayuno ?? 0);
+    a.impAlmuerzos += Number(r.importe_almuerzo ?? 0);
+    a.impCenas += Number(r.importe_cena ?? 0);
     a.comidas = a.desayunos + a.almuerzos + a.cenas;
     return a;
   }, vacio());

@@ -6,6 +6,7 @@ import Cargando from '../componentes/Cargando.jsx';
 import EncabezadoVista from '../componentes/EncabezadoVista.jsx';
 import FilaKpis from '../componentes/FilaKpis.jsx';
 import Kpi from '../componentes/Kpi.jsx';
+import MontoComida from '../componentes/MontoComida.jsx';
 import Tabla from '../componentes/Tabla.jsx';
 import Tarjeta from '../componentes/Tarjeta.jsx';
 import { useEmpleados, useRegistrosRango, useSemanasConDatos, useTipos } from '../datos/consultas.js';
@@ -14,8 +15,8 @@ import {
   anioDe, claveSemana, compararSemanas, desplazarSemana, etiquetaSemana, fechasDeSemanas, hoy, leerClaveSemana,
   mesAnterior, mismaSemana, nombreMes, semanaISO, semanasDelMes, semanasEntre, semanasParaElegir,
 } from '../logica/fechas.js';
-import { fechaCorta, fmtHoras, fmtMoneda, nombreCorto, plural } from '../logica/formato.js';
-import { etiquetaTipo } from '../logica/reglas.js';
+import { fechaCorta, fmtHoras, fmtMoneda, nombreCorto, plural, resumenComidas } from '../logica/formato.js';
+import { COMIDAS, etiquetaTipo } from '../logica/reglas.js';
 
 const CLAVE_VALIDA = /^\d{4}-\d{1,2}$/;
 const menor = (a, b) => (compararSemanas(a, b) <= 0 ? a : b);
@@ -79,7 +80,7 @@ export default function ReportePeriodo() {
     { id: 'grupo', encabezado: 'Grupo', celda: (f) => f.lista[0].grupo },
     { id: 'horas', encabezado: 'Horas', tipo: 'num', celda: (f) => fmtHoras(f.horas) },
     { id: 'he', encabezado: 'Importe HE', tipo: 'num', celda: (f) => fmtMoneda(f.he) },
-    { id: 'alim', encabezado: 'Alimentos', tipo: 'num', celda: (f) => fmtMoneda(f.alim) },
+    ...COMIDAS.map((c) => ({ id: c.clave, encabezado: c.etiqueta, tipo: 'num', celda: (f) => <MontoComida monto={f[c.importe]} cantidad={f[c.cantidad]} /> })),
     { id: 'total', encabezado: 'Total', tipo: 'num', celda: (f) => <b>{fmtMoneda(f.total)}</b> },
   ];
   const selectorSemana = (id, etiqueta, valor, alCambiar) => (
@@ -112,7 +113,7 @@ export default function ReportePeriodo() {
       <FilaKpis>
         <Kpi etiqueta="Horas extra" valor={fmtHoras(s.horas)} sub={`${s.registros} registros`} />
         <Kpi etiqueta="Importe HE" valor={fmtMoneda(s.he)} sub={`Tarifa promedio ${s.horas ? fmtMoneda(s.he / s.horas) : '—'}/h`} />
-        <Kpi etiqueta="Alimentos" valor={fmtMoneda(s.alim)} sub={`${s.comidas} comidas`} />
+        <Kpi etiqueta="Alimentos" valor={fmtMoneda(s.alim)} sub={resumenComidas(s)} />
         <Kpi etiqueta="Total del período" valor={fmtMoneda(s.total)} sub={`Domingos: ${fmtMoneda(dom.total)}`} hero />
       </FilaKpis>
 
@@ -139,17 +140,27 @@ export default function ReportePeriodo() {
         </Tarjeta>
       </div>
 
-      <Tarjeta titulo="Desglose por tipo de hora" subtitulo="Total por tipo (HE + alimentos del registro)">
-        <BarrasHorizontales
-          filas={desglose.map((t) => ({
-            clave: t.clave ?? 'solo-alimentos',
-            etiqueta: etiquetaTipo(t.clave, tipos),
-            valor: t.total,
-            detalle: t.horas ? fmtHoras(t.horas) : `${t.registros} reg.`,
-            texto: fmtMoneda(t.total),
-          }))}
-        />
-      </Tarjeta>
+      <div className="grid-3-1">
+        <Tarjeta titulo="Desglose por tipo de hora" subtitulo="Total por tipo (HE + alimentos del registro)">
+          <BarrasHorizontales
+            filas={desglose.map((t) => ({
+              clave: t.clave ?? 'solo-alimentos',
+              etiqueta: etiquetaTipo(t.clave, tipos),
+              valor: t.total,
+              detalle: t.horas ? fmtHoras(t.horas) : `${t.registros} reg.`,
+              texto: fmtMoneda(t.total),
+            }))}
+          />
+        </Tarjeta>
+        <Tarjeta titulo="Alimentos" subtitulo="Cantidad y monto de cada comida">
+          <div className="rule-list">
+            {COMIDAS.map((c) => (
+              <div key={c.clave} className="rule"><span>{c.plural} ({s[c.cantidad]})</span><b>{fmtMoneda(s[c.importe])}</b></div>
+            ))}
+            <div className="rule"><span>Total alimentos</span><b>{fmtMoneda(s.alim)}</b></div>
+          </div>
+        </Tarjeta>
+      </div>
 
       <Tarjeta titulo="Top 10 empleados del período" subtitulo="Ordenado por total a pagar · clic para ver detalle" conCuerpo={false}>
         <Tabla columnas={columnasTop} filas={mejores} clave={(f) => f.empleado_id} alClicFila={(f) => navegar(`/reportes/empleado/${f.empleado_id}`)} />

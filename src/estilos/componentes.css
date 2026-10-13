@@ -207,3 +207,8 @@ th.sun,td.sun{background:color-mix(in srgb,var(--accent-light) 55%,transparent)}
 .login-titulo{font-size:18px;font-weight:700;letter-spacing:-.2px}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .login-logo{color:var(--fg)} }
 :root[data-theme="dark"] .login-logo{color:var(--fg)}
+
+/* ── Agregado en Horex: tablas con muchas columnas (comidas por separado) caben en 1366 px ── */
+.tbl.compacta th,.tbl.compacta td{padding-left:7px;padding-right:7px}
+.tbl.compacta td:first-child,.tbl.compacta th:first-child{padding-left:16px}
+.tbl.compacta td:last-child,.tbl.compacta th:last-child{padding-right:16px}

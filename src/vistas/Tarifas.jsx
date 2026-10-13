@@ -6,8 +6,9 @@ import Insignia from '../componentes/Insignia.jsx';
 import PildoraTipo from '../componentes/PildoraTipo.jsx';
 import Tarjeta from '../componentes/Tarjeta.jsx';
 import { useToast } from '../componentes/useToast.js';
-import { useConteos, useEmpleados, useGuardarTarifas, useParametros, useTipos } from '../datos/consultas.js';
-import { fmtMoneda, fmtTarifa } from '../logica/formato.js';
+import { useConteos, useEmpleados, useGuardarParametros, useGuardarTarifas, useParametros, useTipos } from '../datos/consultas.js';
+import { fmtTarifa } from '../logica/formato.js';
+import { COMIDAS } from '../logica/reglas.js';
 import { useSesion } from '../sesion/contexto.js';
 
 const PENDIENTES = [
@@ -67,19 +68,74 @@ export default function Tarifas() {
             </table>
           </div>
         </Tarjeta>
-        <Tarjeta titulo="Alimentos y excepciones">
-          <div className="rule-list">
-            <div className="rule"><span>Desayuno · entrada a las 6:00 AM o antes</span><b>{fmtMoneda(parametros.monto_alimento)}</b></div>
-            <div className="rule"><span>Cena · salida a las 10:00 PM o después</span><b>{fmtMoneda(parametros.monto_alimento)}</b></div>
-            <div className="rule"><span>Almuerzo · criterio por confirmar</span><b>{fmtMoneda(parametros.monto_alimento)}</b></div>
-            {puestosSinHE.map((p) => <div key={p} className="rule"><span>{p}</span><b>Solo alimentos</b></div>)}
-          </div>
-        </Tarjeta>
+        <MontosYExcepciones
+          key={JSON.stringify(parametros)}
+          parametros={parametros}
+          puestosSinHE={puestosSinHE}
+          editable={esSupervisor}
+        />
       </div>
       <Tarjeta titulo="Pendientes por confirmar con nómina" subtitulo="Necesarios antes de automatizar el cálculo con hora de entrada y salida">
         <ol className="q-list">{PENDIENTES.map((p) => <li key={p}>{p}</li>)}</ol>
       </Tarjeta>
     </section>
+  );
+}
+
+const CRITERIOS = {
+  desayuno: 'entrada a las 6:00 AM o antes',
+  almuerzo: 'criterio por confirmar',
+  cena: 'salida a las 10:00 PM o después',
+};
+
+/** Montos de cada comida y tarifa de domingo del eventual: editables por el supervisor. */
+function MontosYExcepciones({ parametros, puestosSinHE, editable }) {
+  const toast = useToast();
+  const guardar = useGuardarParametros();
+  const claves = [...COMIDAS.map((c) => c.parametro), 'tarifa_domingo_eventual'];
+  const [valores, setValores] = useState(() => Object.fromEntries(claves.map((k) => [k, String(parametros[k] ?? '')])));
+
+  function guardarCambios() {
+    const cambios = Object.fromEntries(Object.entries(valores).map(([k, v]) => [k, parseFloat(v)]).filter(([, v]) => v >= 0));
+    guardar.mutate(cambios, {
+      onSuccess: ({ cambiados: n }) => toast(n
+        ? `${n} monto${n > 1 ? 's' : ''} actualizado${n > 1 ? 's' : ''} · aplica a capturas nuevas`
+        : 'Sin cambios'),
+      onError: (e) => toast(e.message),
+    });
+  }
+
+  const campo = (clave, etiqueta) => (
+    <input
+      className="input sm tarifa-input" type="number" min="0" step="5" aria-label={etiqueta}
+      value={valores[clave]} disabled={!editable}
+      onChange={(e) => setValores((v) => ({ ...v, [clave]: e.target.value }))}
+    />
+  );
+
+  return (
+    <Tarjeta
+      titulo="Alimentos y excepciones"
+      subtitulo="Monto de cada comida y tarifa del eventual en domingo"
+      accion={editable && (
+        <button type="button" className="btn btn-brand btn-xs" onClick={guardarCambios} disabled={guardar.isPending}>Guardar cambios</button>
+      )}
+    >
+      <div className="rule-list">
+        {COMIDAS.map((c) => (
+          <div key={c.clave} className="rule" style={{ alignItems: 'center' }}>
+            <span>{c.etiqueta} · {CRITERIOS[c.clave]}</span>{campo(c.parametro, `Monto ${c.etiqueta}`)}
+          </div>
+        ))}
+        <div className="rule" style={{ alignItems: 'center' }}>
+          <span>Domingo, personal eventual ($/hr)</span>{campo('tarifa_domingo_eventual', 'Tarifa domingo eventual')}
+        </div>
+        {puestosSinHE.map((p) => <div key={p} className="rule"><span>{p}</span><b>Solo alimentos</b></div>)}
+      </div>
+      <div className="faint" style={{ fontSize: 12, marginTop: 10 }}>
+        Cada registro guarda los montos vigentes al capturarlo: cambiarlos aquí sólo afecta capturas nuevas.
+      </div>
+    </Tarjeta>
   );
 }
 

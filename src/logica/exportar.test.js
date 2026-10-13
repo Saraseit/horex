@@ -10,11 +10,14 @@ const exportar = (formato) => datosExport({ registros, empleados: EMPLEADOS_PRUE
 describe('datosExport', () => {
   it('resumen: una fila por empleado y TOTAL igual a la semana', () => {
     const d = exportar('resumen');
-    expect(d.encabezados).toEqual(['Nombre', 'IMSS', 'Grupo', 'Reclutador', 'Horas', 'Importe HE', 'Desayunos', 'Almuerzos', 'Cenas', '$ Alimentos', 'Total']);
+    expect(d.encabezados).toEqual(['Nombre', 'IMSS', 'Grupo', 'Reclutador', 'Horas', 'Importe HE',
+      'Desayunos', '$ Desayunos', 'Almuerzos', '$ Almuerzos', 'Cenas', '$ Cenas', '$ Alimentos', 'Total']);
     expect(d.filas).toHaveLength(14);
     expect(d.filas[0][0]).toBe('Aldry Rangel Ake Pech');
     const s = sumar(registros);
-    expect(d.pie).toEqual(['TOTAL', '', '', '', s.horas, s.he, s.desayunos, s.almuerzos, s.cenas, s.alim, s.total]);
+    expect(d.pie).toEqual(['TOTAL', '', '', '', s.horas, s.he, s.desayunos, s.impDesayunos, s.almuerzos, s.impAlmuerzos, s.cenas, s.impCenas, s.alim, s.total]);
+    // Cada comida por separado suma lo mismo que el total de alimentos.
+    expect(s.impDesayunos + s.impAlmuerzos + s.impCenas).toBe(s.alim);
     expect(d.pie.at(-1)).toBe(6595);
   });
 
@@ -56,7 +59,7 @@ describe('formatos de archivo', () => {
     const hoja = libro.worksheets[0];
     expect(hoja.getRow(1).getCell(1).value).toBe('Nombre');
     expect(hoja.getRow(1).getCell(1).font.bold).toBe(true);
-    expect(hoja.getRow(hoja.rowCount).getCell(11).value).toBe(6595);
-    expect(hoja.getColumn(11).numFmt).toContain('$');
+    expect(hoja.getRow(hoja.rowCount).getCell(14).value).toBe(6595);
+    expect(hoja.getColumn(14).numFmt).toContain('$');
   }, 30_000); // la primera carga de exceljs en Node es lenta
 });

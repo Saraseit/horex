@@ -59,13 +59,24 @@ export function notaRegla({ tarifa, regla, tipoClave, fecha }) {
 
 export const numComidas = (r) => (r.desayuno ? 1 : 0) + (r.almuerzo ? 1 : 0) + (r.cena ? 1 : 0);
 
+/**
+ * Las tres comidas, en el orden en que se muestran. `parametro`: su monto en parametros;
+ * `cantidad` e `importe`: sus campos en el resultado de sumar() (agregados.js).
+ */
+export const COMIDAS = [
+  { clave: 'desayuno', etiqueta: 'Desayuno', plural: 'Desayunos', parametro: 'monto_desayuno', cantidad: 'desayunos', importe: 'impDesayunos' },
+  { clave: 'almuerzo', etiqueta: 'Almuerzo', plural: 'Almuerzos', parametro: 'monto_almuerzo', cantidad: 'almuerzos', importe: 'impAlmuerzos' },
+  { clave: 'cena', etiqueta: 'Cena', plural: 'Cenas', parametro: 'monto_cena', cantidad: 'cenas', importe: 'impCenas' },
+];
+
 /** Agrega las columnas calculadas que en Postgres son "generated always as". */
 export function completarRegistro(r) {
   const horas = Number(r.horas);
   const tarifa = Number(r.tarifa_aplicada);
-  const monto = Number(r.monto_alimento);
   const importe_he = horas * tarifa;
-  const importe_alimentos = numComidas(r) * monto;
+  const montos = Object.fromEntries(COMIDAS.map((c) => [`monto_${c.clave}`, Number(r[`monto_${c.clave}`] ?? 0)]));
+  const importes = Object.fromEntries(COMIDAS.map((c) => [`importe_${c.clave}`, r[c.clave] ? montos[`monto_${c.clave}`] : 0]));
+  const importe_alimentos = importes.importe_desayuno + importes.importe_almuerzo + importes.importe_cena;
   const { anio, semana } = semanaISO(r.fecha);
   return {
     ...r,
@@ -73,7 +84,8 @@ export function completarRegistro(r) {
     semana,
     horas,
     tarifa_aplicada: tarifa,
-    monto_alimento: monto,
+    ...montos,
+    ...importes,
     importe_he,
     importe_alimentos,
     total: importe_he + importe_alimentos,

@@ -1,4 +1,6 @@
-// Fase 1: la app corre con los datos de prueba de la demo, que terminan el sábado 10 oct 2026.
-// Se fija "hoy" en esa fecha para que Semana actual, Por período y la captura se vean como la demo.
-// En la Fase 4 (captura real) esto vuelve a null y "hoy" se calcula con la hora de Mérida.
-export const HOY_FIJO = '2026-10-10';
+// Modo de prueba (npm run build:prueba, que usan las pruebas de Playwright): datos de la demo en memoria
+// y "hoy" fijo en el sábado 10 oct 2026, para que las pantallas se comparen contra la demo.
+// En producción no hay nada fijo: los datos vienen de la API y "hoy" es la fecha de Mérida.
+const entorno = import.meta.env ?? {};
+export const DATOS_PRUEBA = entorno.VITE_DATOS_PRUEBA === '1';
+export const HOY_FIJO = entorno.VITE_HOY_FIJO || null;

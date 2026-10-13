@@ -25,15 +25,17 @@ export function datosExport({ registros, empleados, tipos, formato }) {
       .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
       .map((e) => {
         const s = sumar(registros.filter((r) => r.empleado_id === e.id));
-        return [e.nombre, siNo(e.imss), e.grupo, e.reclutador, s.horas, s.he, s.desayunos, s.almuerzos, s.cenas, s.alim, s.total];
+        return [e.nombre, siNo(e.imss), e.grupo, e.reclutador, s.horas, s.he,
+          s.desayunos, s.impDesayunos, s.almuerzos, s.impAlmuerzos, s.cenas, s.impCenas, s.alim, s.total];
       });
     const s = sumar(registros);
     return {
-      encabezados: ['Nombre', 'IMSS', 'Grupo', 'Reclutador', 'Horas', 'Importe HE', 'Desayunos', 'Almuerzos', 'Cenas', '$ Alimentos', 'Total'],
+      encabezados: ['Nombre', 'IMSS', 'Grupo', 'Reclutador', 'Horas', 'Importe HE',
+        'Desayunos', '$ Desayunos', 'Almuerzos', '$ Almuerzos', 'Cenas', '$ Cenas', '$ Alimentos', 'Total'],
       filas,
-      pie: ['TOTAL', '', '', '', s.horas, s.he, s.desayunos, s.almuerzos, s.cenas, s.alim, s.total],
-      moneda: [5, 9, 10],
-      numericas: [4, 5, 6, 7, 8, 9, 10],
+      pie: ['TOTAL', '', '', '', s.horas, s.he, s.desayunos, s.impDesayunos, s.almuerzos, s.impAlmuerzos, s.cenas, s.impCenas, s.alim, s.total],
+      moneda: [5, 7, 9, 11, 12, 13],
+      numericas: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
       fechas: [],
     };
   }
@@ -46,7 +48,7 @@ export function datosExport({ registros, empleados, tipos, formato }) {
         e.nombre, e.puesto, e.grupo, e.reclutador, siNo(e.imss),
         etiquetaTipo(r.tipo_clave, tipos).toUpperCase(), r.semana, r.fecha,
         r.horas, r.tarifa_aplicada, r.importe_he,
-        r.desayuno ? r.monto_alimento : 0, r.almuerzo ? r.monto_alimento : 0, r.cena ? r.monto_alimento : 0,
+        r.importe_desayuno, r.importe_almuerzo, r.importe_cena,
         r.importe_alimentos,
       ];
     });

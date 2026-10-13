@@ -82,7 +82,14 @@ export const almacen = {
     if (!tipoClave && horas !== 0) return fallar('Un registro sin tipo de hora no puede llevar horas.');
     if (!tipoClave && !(datos.desayuno || datos.almuerzo || datos.cena)) return fallar('Un registro sin horas extra debe llevar al menos un alimento.');
     if (horas < 0 || horas > 16) return fallar('Las horas deben estar entre 0 y 16.');
-    const { tarifa } = calcularTarifa({ empleado, fecha: datos.fecha, tipoClave, tipos: estado.tipos, parametros: estado.parametros });
+    let tarifa;
+    if (datos.tarifa_manual && empleado.genera_he) {
+      try { exigirSupervisor(datos.usuario); } catch { return fallar('Solo el supervisor puede poner una tarifa manual.'); }
+      if (!String(datos.nota ?? '').trim()) return fallar('La tarifa manual necesita una nota que explique el motivo.');
+      tarifa = Number(datos.tarifa_aplicada);
+    } else {
+      ({ tarifa } = calcularTarifa({ empleado, fecha: datos.fecha, tipoClave, tipos: estado.tipos, parametros: estado.parametros }));
+    }
 
     const registro = completarRegistro({
       id: Math.max(0, ...estado.registros.map((r) => r.id)) + 1,
@@ -91,24 +98,26 @@ export const almacen = {
       tipo_clave: tipoClave,
       horas,
       tarifa_aplicada: tarifa,
+      tarifa_manual: !!datos.tarifa_manual && empleado.genera_he,
+      nota: datos.tarifa_manual ? String(datos.nota ?? '').trim() : null,
       desayuno: !!datos.desayuno,
       almuerzo: !!datos.almuerzo,
       cena: !!datos.cena,
-      monto_alimento: estado.parametros.monto_alimento,
+      monto_desayuno: estado.parametros.monto_desayuno,
+      monto_almuerzo: estado.parametros.monto_almuerzo,
+      monto_cena: estado.parametros.monto_cena,
       capturado_por_nombre: datos.usuario.nombre,
     });
     estado.registros.push(registro);
     return responder(conEmpleado(registro));
   },
 
-  /** Borrado lógico de uno o varios registros. Todo o nada: si uno no se puede, no se borra ninguno. */
+  /** Borrado lógico de uno o varios registros (el supervisor, también en semanas cerradas). Todo o nada. */
   eliminarRegistros(ids, usuario) {
     try { exigirSupervisor(usuario); } catch (e) { return fallar(e.message); }
     if (!ids.length) return fallar('No hay registros seleccionados.');
     const lista = ids.map((id) => estado.registros.find((x) => x.id === id && !x.eliminado_at));
     if (lista.some((r) => !r)) return fallar('Alguno de los registros ya no existe. Recarga e inténtalo de nuevo.');
-    const enCerrada = lista.find((r) => estaCerrada({ anio: r.anio_iso, semana: r.semana }));
-    if (enCerrada) return fallar(`La semana ${enCerrada.semana} está cerrada: no se pueden eliminar sus registros.`);
     const ahora = new Date().toISOString();
     for (const r of lista) {
       r.eliminado_at = ahora;
@@ -148,6 +157,19 @@ export const almacen = {
     const e = estado.empleados.find((x) => x.id === id);
     e.activo = activo;
     return responder(e);
+  },
+
+  /** cambios: { clave: valor } de montos de comidas y tarifa de domingo del eventual. */
+  guardarParametros(cambios, usuario) {
+    try { exigirSupervisor(usuario); } catch (e) { return fallar(e.message); }
+    let n = 0;
+    for (const [clave, valor] of Object.entries(cambios)) {
+      if (clave in estado.parametros && valor >= 0 && Number(estado.parametros[clave]) !== valor) {
+        estado.parametros[clave] = valor;
+        n += 1;
+      }
+    }
+    return responder({ cambiados: n });
   },
 
   /** cambios: { CLAVE: tarifa }. Devuelve cuántas tarifas cambiaron. Nunca toca registros guardados. */

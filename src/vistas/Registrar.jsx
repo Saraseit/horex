@@ -9,6 +9,7 @@ import {
 } from '../datos/consultas.js';
 import { esDomingo, hoy } from '../logica/fechas.js';
 import { fechaCorta, fechaLarga, fmtHoras, fmtMoneda, nombreCorto, siNo } from '../logica/formato.js';
+import { useSesion } from '../sesion/contexto.js';
 import { calcularTarifa, claseTipo, esEspecial, notaRegla } from '../logica/reglas.js';
 
 const ALIMENTOS = [
@@ -25,6 +26,7 @@ export default function Registrar() {
   const parametrosQ = useParametros();
   const recientesQ = useRegistrosRecientes(7);
   const crear = useCrearRegistro();
+  const { esSupervisor } = useSesion();
   const hoyF = hoy();
 
   const [empleado, setEmpleado] = useState(null);
@@ -32,6 +34,8 @@ export default function Registrar() {
   const [tipo, setTipo] = useState(null);
   const [fecha, setFecha] = useState(hoyF);
   const [alimentos, setAlimentos] = useState(SIN_ALIMENTOS);
+  // Tarifa manual (sólo supervisor): excepción con nota obligatoria; la base la valida otra vez.
+  const [manual, setManual] = useState({ activa: false, tarifa: '', nota: '' });
   const [error, setError] = useState('');
   const [ultimoId, setUltimoId] = useState(null);
   const [vueltaBuscador, setVueltaBuscador] = useState(0);
@@ -53,16 +57,22 @@ export default function Registrar() {
   const tarifaDe = (clave) => (!empleado || sinHE
     ? { tarifa: Number(tipos.find((t) => t.clave === clave).tarifa), regla: null }
     : calcularTarifa({ empleado, fecha, tipoClave: clave, tipos, parametros }));
-  const { tarifa, regla } = tipo && !sinHE ? tarifaDe(tipo) : { tarifa: 0, regla: null };
+  const usaManual = manual.activa && !sinHE;
+  const tarifaManual = parseFloat(manual.tarifa);
+  const { tarifa, regla } = tipo && !sinHE
+    ? (usaManual ? { tarifa: Number.isFinite(tarifaManual) ? tarifaManual : 0, regla: null } : tarifaDe(tipo))
+    : { tarifa: 0, regla: null };
   const horas = sinHE ? 0 : parseFloat(horasTexto) || 0;
   const importe = horas * tarifa;
-  const monto = Number(parametros.monto_alimento);
-  const importeAlimentos = ALIMENTOS.filter((a) => alimentos[a.clave]).length * monto;
+  const montoDe = (clave) => Number(parametros[`monto_${clave}`] ?? 0);
+  const elegidos = ALIMENTOS.filter((a) => alimentos[a.clave]);
+  const importeAlimentos = elegidos.reduce((t, a) => t + montoDe(a.clave), 0);
+  const manualValida = !usaManual || (Number.isFinite(tarifaManual) && tarifaManual >= 0 && manual.nota.trim() !== '');
   const domingo = esDomingo(fecha);
   const tarifaEspecial = Number(tipos.find((t) => t.clave === 'ESPECIAL_LOCAL')?.tarifa ?? 0);
   const duplicado = !!empleado && (delDiaQ.data?.length ?? 0) > 0;
   const valido = !!empleado && !!fecha && fecha <= hoyF && !crear.isPending
-    && (sinHE ? importeAlimentos > 0 : horas > 0 && horas <= 16 && !!tipo);
+    && (sinHE ? importeAlimentos > 0 : horas > 0 && horas <= 16 && !!tipo && manualValida);
 
   const cambio = (fn) => (...args) => { setError(''); fn(...args); };
 
@@ -79,6 +89,7 @@ export default function Registrar() {
       tipo_clave: sinHE ? null : tipo,
       horas: sinHE ? 0 : horas,
       ...alimentos,
+      ...(usaManual && { tarifa_manual: true, tarifa_aplicada: tarifaManual, nota: manual.nota.trim() }),
     }, {
       onSuccess: (r) => {
         setUltimoId(r.id);
@@ -87,6 +98,7 @@ export default function Registrar() {
         setHorasTexto('');
         setTipo(null);
         setAlimentos(SIN_ALIMENTOS);
+        setManual({ activa: false, tarifa: '', nota: '' });
         setVueltaBuscador((v) => v + 1);
       },
       onError: (e) => setError(e.message),
@@ -163,6 +175,30 @@ export default function Registrar() {
                 })}
               </div>
             </div>
+            {esSupervisor && !sinHE && (
+              manual.activa ? (
+                <div className="row-2">
+                  <div className="field">
+                    <label className="label" htmlFor="tarifa-manual">Tarifa manual ($/hr)</label>
+                    <input id="tarifa-manual" className="input mono" type="number" min="0" step="0.5" value={manual.tarifa}
+                      onChange={cambio((e) => setManual((m) => ({ ...m, tarifa: e.target.value })))} />
+                  </div>
+                  <div className="field">
+                    <label className="label" htmlFor="nota-manual">Motivo <span className="required">*</span></label>
+                    <input id="nota-manual" className="input" type="text" placeholder="Ej. acordado con operaciones" value={manual.nota}
+                      onChange={cambio((e) => setManual((m) => ({ ...m, nota: e.target.value })))} />
+                  </div>
+                  <button type="button" className="btn btn-ghost btn-xs" style={{ justifySelf: 'start' }} onClick={() => setManual({ activa: false, tarifa: '', nota: '' })}>
+                    Quitar tarifa manual
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="btn btn-ghost btn-xs" style={{ alignSelf: 'flex-start' }}
+                  onClick={() => setManual({ activa: true, tarifa: tipo ? String(tarifa) : '', nota: '' })}>
+                  Usar tarifa manual…
+                </button>
+              )
+            )}
             {domingo && (
               <Alerta tipo="info" icono="◆">
                 Domingo — día de descanso. Usa <strong>Especial</strong>: ${tarifaEspecial}/hr personal fijo, ${Number(parametros.tarifa_domingo_eventual)}/hr eventual. Horex aplica la tarifa según el grupo.
@@ -180,7 +216,7 @@ export default function Registrar() {
                   onClick={() => alternarAlimento(a.clave)}
                   onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); alternarAlimento(a.clave); } }}
                 >
-                  <span className="alimento-icon">{a.icono}</span>{a.texto}<span className="alimento-monto">{fmtMoneda(monto)}</span>
+                  <span className="alimento-icon">{a.icono}</span>{a.texto}<span className="alimento-monto">{fmtMoneda(montoDe(a.clave))}</span>
                 </div>
               ))}
             </div>
@@ -194,10 +230,13 @@ export default function Registrar() {
               <div className="resumen-row"><span className="r-label">Fecha</span><span className="r-value txt">{fecha ? fechaLarga(fecha) : '—'}</span></div>
               <div className="resumen-row"><span className="r-label">Horas × tarifa</span><span className="r-value">{sinHE ? 'No aplica' : horas && tarifa ? `${horas} × $${tarifa}` : '—'}</span></div>
               <div className="resumen-row"><span className="r-label">Importe HE</span><span className="r-value">{fmtMoneda(importe)}</span></div>
-              <div className="resumen-row"><span className="r-label">Alimentos</span><span className="r-value">{fmtMoneda(importeAlimentos)}</span></div>
+              <div className="resumen-row">
+                <span className="r-label">Alimentos{elegidos.length > 0 && <small className="faint"> · {elegidos.map((a) => `${a.texto} ${fmtMoneda(montoDe(a.clave))}`).join(' + ')}</small>}</span>
+                <span className="r-value">{fmtMoneda(importeAlimentos)}</span>
+              </div>
             </div>
             <div className="resumen-total"><span className="r-label">Total registro</span><span className="r-value">{fmtMoneda(importe + importeAlimentos)}</span></div>
-            <div className="regla-note">{notaRegla({ tarifa, regla, tipoClave: tipo, fecha })}</div>
+            <div className="regla-note">{usaManual ? 'Tarifa manual (queda marcada en los reportes con su nota)' : notaRegla({ tarifa, regla, tipoClave: tipo, fecha })}</div>
             {error && <Alerta tipo="warn" estilo={{ marginTop: 8 }}>{error}</Alerta>}
             <button type="button" className="btn btn-primary btn-block" disabled={!valido} style={{ marginTop: 8 }} onClick={guardar}>
               Guardar registro

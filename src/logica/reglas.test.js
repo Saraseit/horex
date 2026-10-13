@@ -56,8 +56,14 @@ describe('notaRegla', () => {
 
 describe('completarRegistro', () => {
   it('calcula importes y semana como las columnas generadas de Postgres', () => {
-    const r = completarRegistro({ fecha: '2026-10-10', horas: 2.5, tarifa_aplicada: 60, desayuno: true, almuerzo: false, cena: true, monto_alimento: 50 });
-    expect(r).toMatchObject({ anio_iso: 2026, semana: 41, importe_he: 150, importe_alimentos: 100, total: 250 });
+    const r = completarRegistro({
+      fecha: '2026-10-10', horas: 2.5, tarifa_aplicada: 60, desayuno: true, almuerzo: false, cena: true,
+      monto_desayuno: 60, monto_almuerzo: 50, monto_cena: 70,
+    });
+    expect(r).toMatchObject({
+      anio_iso: 2026, semana: 41, importe_he: 150,
+      importe_desayuno: 60, importe_almuerzo: 0, importe_cena: 70, importe_alimentos: 130, total: 280,
+    });
   });
 });
 

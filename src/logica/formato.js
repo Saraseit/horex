@@ -34,4 +34,7 @@ export function iniciales(nombre) {
 export const normalizar = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 export const siNo = (b) => (b ? 'SI' : 'NO');
+
+/** Cantidad de cada comida en una suma: "Des. 5 · Alm. 0 · Cena 3". */
+export const resumenComidas = (s) => `Des. ${s.desayunos} · Alm. ${s.almuerzos} · Cena ${s.cenas}`;
 export const plural = (n, singular, pluralTexto = `${singular}s`) => (n === 1 ? singular : pluralTexto);

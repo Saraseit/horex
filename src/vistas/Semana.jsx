@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import Alimentos from '../componentes/Alimentos.jsx';
-import BorradoMasivo from '../componentes/BorradoMasivo.jsx';
+import AccionesRegistros from '../componentes/AccionesRegistros.jsx';
 import Cargando from '../componentes/Cargando.jsx';
 import ConfirmacionEnLinea from '../componentes/ConfirmacionEnLinea.jsx';
 import EncabezadoVista from '../componentes/EncabezadoVista.jsx';
 import FilaKpis from '../componentes/FilaKpis.jsx';
 import Insignia from '../componentes/Insignia.jsx';
 import Kpi from '../componentes/Kpi.jsx';
+import MontoComida from '../componentes/MontoComida.jsx';
 import PildoraTipo from '../componentes/PildoraTipo.jsx';
 import Tabla from '../componentes/Tabla.jsx';
 import Tarjeta from '../componentes/Tarjeta.jsx';
 import { columnaSeleccion, useSeleccion } from '../componentes/seleccion.jsx';
+import { useRecibos } from '../componentes/useRecibos.js';
 import { useToast } from '../componentes/useToast.js';
 import {
   useCerrarSemana, useEliminarRegistros, useRegistrosSemana, useSemanasCerradas, useSemanasConDatos,
@@ -21,7 +22,8 @@ import {
   DIAS_CORTOS, claveSemana, compararSemanas, desplazarSemana, diasDeSemana, etiquetaSemana, hoy, indiceDia,
   leerClaveSemana, parseD, rangoSemanaTexto, semanaISO, semanasParaElegir,
 } from '../logica/fechas.js';
-import { fechaLarga, fmtHoras, fmtMoneda, fmtTarifa, nombreCorto, redondear1 } from '../logica/formato.js';
+import { fechaLarga, fmtHoras, fmtMoneda, fmtTarifa, nombreCorto, redondear1, resumenComidas } from '../logica/formato.js';
+import { COMIDAS } from '../logica/reglas.js';
 import { useSesion } from '../sesion/contexto.js';
 
 const DOMINGO = 6;
@@ -44,10 +46,12 @@ function ContenidoSemana({ seleccion, actual }) {
   const semanasQ = useSemanasConDatos();
   const cerradasQ = useSemanasCerradas();
   const eliminar = useEliminarRegistros();
-  const marcados = useSeleccion();
   const cerrar = useCerrarSemana();
+  const marcados = useSeleccion();
+  const recibos = useRecibos();
   const [confirmarId, setConfirmarId] = useState(null);
   const [confirmarCierre, setConfirmarCierre] = useState(false);
+  const [fechaPago, setFechaPago] = useState(hoy());
 
   const consultas = [registrosQ, semanasQ, cerradasQ];
   if (consultas.some((q) => q.isPending)) return <Cargando error={consultas.find((q) => q.error)?.error} />;
@@ -63,7 +67,7 @@ function ContenidoSemana({ seleccion, actual }) {
 
   function cerrarSemana() {
     cerrar.mutate(seleccion, {
-      onSuccess: () => toast(`Semana ${seleccion.semana} cerrada: queda de solo lectura`),
+      onSuccess: () => toast(`Semana ${seleccion.semana} cerrada: ya no acepta capturas`),
       onError: (e) => toast(e.message),
       onSettled: () => setConfirmarCierre(false),
     });
@@ -96,6 +100,13 @@ function ContenidoSemana({ seleccion, actual }) {
     },
   }));
 
+  const columnasComidaTotales = COMIDAS.map((c) => ({
+    id: c.clave,
+    encabezado: c.etiqueta,
+    tipo: 'num',
+    celda: (f) => <MontoComida monto={f[c.importe]} cantidad={f[c.cantidad]} />,
+  }));
+
   const columnasMatriz = [
     {
       id: 'empleado',
@@ -105,44 +116,57 @@ function ContenidoSemana({ seleccion, actual }) {
     ...columnasDias,
     { id: 'horas', encabezado: 'Horas', tipo: 'num', celda: (f) => fmtHoras(f.horas) },
     { id: 'he', encabezado: 'Importe HE', tipo: 'num', celda: (f) => fmtMoneda(f.he) },
-    { id: 'alim', encabezado: 'Alim.', tipo: 'num', celda: (f) => fmtMoneda(f.alim) },
+    ...columnasComidaTotales,
     { id: 'total', encabezado: 'Total', tipo: 'num', celda: (f) => <b>{fmtMoneda(f.total)}</b> },
   ];
 
   function accion(r) {
-    if (!esSupervisor) return <span className="faint" title="Solo supervisor">—</span>;
-    if (cerrada) return <span className="faint" title="Semana cerrada">—</span>;
+    const recibo = (
+      <button type="button" className="btn btn-ghost btn-xs" disabled={recibos.generando} onClick={() => recibos.descargar([r], fechaPago)}>
+        Recibo
+      </button>
+    );
+    if (!esSupervisor) return recibo;
     if (confirmarId === r.id) {
       return <ConfirmacionEnLinea alConfirmar={() => eliminarRegistros([r.id])} alCancelar={() => setConfirmarId(null)} ocupado={eliminar.isPending} />;
     }
-    return <button type="button" className="btn btn-ghost btn-xs" onClick={() => setConfirmarId(r.id)}>Eliminar</button>;
+    return (
+      <span className="toolbar" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+        {recibo}
+        <button type="button" className="btn btn-ghost btn-xs" onClick={() => setConfirmarId(r.id)}>Eliminar</button>
+      </span>
+    );
   }
 
-  const columnasDetalleBase = [
+  const detalle = [...regs].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
+  const ids = detalle.map((r) => r.id);
+  const columnasDetalle = [
+    columnaSeleccion({ seleccion: marcados, elegibles: ids }),
     { id: 'fecha', encabezado: 'Fecha', celda: (r) => fechaLarga(r.fecha) },
     { id: 'empleado', encabezado: 'Empleado', celda: (r) => nombreCorto(r.nombre) },
-    { id: 'tipo', encabezado: 'Tipo', celda: (r) => <PildoraTipo clave={r.tipo_clave} etiqueta={r.tipo_etiqueta} /> },
+    {
+      id: 'tipo',
+      encabezado: 'Tipo',
+      celda: (r) => <><PildoraTipo clave={r.tipo_clave} etiqueta={r.tipo_etiqueta} />{r.tarifa_manual && <> <span className="badge amber" title={r.nota}>manual</span></>}</>,
+    },
     { id: 'horas', encabezado: 'Horas', tipo: 'num', celda: (r) => r.horas || '—' },
     { id: 'tarifa', encabezado: 'Tarifa', tipo: 'num', celda: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—') },
     { id: 'importe', encabezado: 'Importe', tipo: 'num', celda: (r) => fmtMoneda(r.importe_he) },
-    { id: 'alim', encabezado: 'Alim.', tipo: 'ctr', celda: (r) => <Alimentos registro={r} /> },
+    ...COMIDAS.map((c) => ({
+      id: c.clave,
+      encabezado: c.etiqueta,
+      tipo: 'num',
+      celda: (r) => (r[c.clave] ? fmtMoneda(r[`importe_${c.clave}`]) : <span className="faint">—</span>),
+    })),
     { id: 'total', encabezado: 'Total', tipo: 'num', celda: (r) => <b>{fmtMoneda(r.total)}</b> },
     { id: 'capturo', encabezado: 'Capturó', claseCelda: 'faint', estiloCelda: { fontSize: 12 }, celda: (r) => r.capturado_por_nombre },
     { id: 'accion', encabezado: '', estiloCelda: { textAlign: 'right' }, celda: accion },
   ];
-  const detalle = [...regs].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
-  // Borrado masivo: sólo el supervisor y sólo en semanas abiertas.
-  const puedeBorrar = esSupervisor && !cerrada;
-  const elegibles = puedeBorrar ? detalle.map((r) => r.id) : [];
-  const columnasDetalle = puedeBorrar
-    ? [columnaSeleccion({ seleccion: marcados, elegibles }), ...columnasDetalleBase]
-    : columnasDetalleBase;
-  const cuantosMarcados = elegibles.filter((id) => marcados.tiene(id)).length;
+  const seleccionados = detalle.filter((r) => marcados.tiene(r.id));
 
-  let subtituloDetalle = esSupervisor
-    ? 'Como supervisor puedes eliminar registros erróneos, uno por uno o marcando varias casillas'
-    : 'Solo el supervisor puede eliminar registros';
-  if (esSupervisor && cerrada) subtituloDetalle = 'Semana cerrada: ya no se pueden eliminar registros';
+  const subtituloDetalle = esSupervisor
+    ? 'Marca registros para descargar sus recibos o eliminarlos (también en semanas cerradas)'
+    : 'Marca registros para descargar sus recibos · solo el supervisor puede eliminar';
 
   return (
     <section className="view">
@@ -169,7 +193,7 @@ function ContenidoSemana({ seleccion, actual }) {
       <FilaKpis>
         <Kpi etiqueta="Horas extra" valor={fmtHoras(s.horas)} sub={`${s.registros} registros`} />
         <Kpi etiqueta="Importe HE" valor={fmtMoneda(s.he)} sub={`${empleados.length} empleados`} />
-        <Kpi etiqueta="Alimentos" valor={fmtMoneda(s.alim)} sub={`${s.comidas} comidas`} />
+        <Kpi etiqueta="Alimentos" valor={fmtMoneda(s.alim)} sub={resumenComidas(s)} />
         <Kpi etiqueta="Total a pagar" valor={fmtMoneda(s.total)} sub="HE + alimentos" hero />
       </FilaKpis>
 
@@ -179,13 +203,14 @@ function ContenidoSemana({ seleccion, actual }) {
             columnas={columnasMatriz}
             filas={empleados}
             clave={(f) => f.empleado_id}
+            compacta
             alClicFila={(f) => navegar(`/reportes/empleado/${f.empleado_id}`)}
             pie={<>
               <td>Total semana</td>
               {totalesDia.map((h, i) => <td key={i} className={i === DOMINGO ? 'day-cell sun' : 'day-cell'}>{h ? redondear1(h) : '·'}</td>)}
               <td className="num">{fmtHoras(s.horas)}</td>
               <td className="num">{fmtMoneda(s.he)}</td>
-              <td className="num">{fmtMoneda(s.alim)}</td>
+              {COMIDAS.map((c) => <td key={c.clave} className="num"><MontoComida monto={s[c.importe]} cantidad={s[c.cantidad]} /></td>)}
               <td className="num">{fmtMoneda(s.total)}</td>
             </>}
           />
@@ -196,11 +221,14 @@ function ContenidoSemana({ seleccion, actual }) {
         titulo="Registros de la semana"
         subtitulo={subtituloDetalle}
         conCuerpo={false}
-        accion={puedeBorrar && (
-          <BorradoMasivo
-            cantidad={cuantosMarcados}
-            ocupado={eliminar.isPending}
-            alConfirmar={() => eliminarRegistros(elegibles.filter((id) => marcados.tiene(id)))}
+        accion={(
+          <AccionesRegistros
+            marcados={seleccionados}
+            fechaPago={fechaPago}
+            alCambiarFecha={setFechaPago}
+            puedeBorrar={esSupervisor}
+            alEliminar={eliminarRegistros}
+            eliminando={eliminar.isPending}
           />
         )}
       >
@@ -208,6 +236,7 @@ function ContenidoSemana({ seleccion, actual }) {
           columnas={columnasDetalle}
           filas={detalle}
           clave={(r) => r.id}
+          compacta
           claseFila={(r) => (marcados.tiene(r.id) ? 'seleccionada' : undefined)}
         />
       </Tarjeta>

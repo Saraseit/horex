@@ -1,7 +1,12 @@
-// Hooks de datos. Las vistas sólo usan estos hooks; en las fases 2–4 cambia la fuente (API) y no las vistas.
+// Hooks de datos. Las vistas sólo usan estos hooks. La fuente es la API; en modo de prueba
+// (pruebas de Playwright) es el almacén en memoria con los datos de la demo.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { DATOS_PRUEBA } from '../configuracion.js';
 import { useSesion } from '../sesion/contexto.js';
-import { almacen } from './almacenPrueba.js';
+import { almacen as almacenPrueba } from './almacenPrueba.js';
+import { fuenteApi } from './fuenteApi.js';
+
+const almacen = DATOS_PRUEBA ? almacenPrueba : fuenteApi;
 
 export const useEmpleados = () => useQuery({ queryKey: ['empleados'], queryFn: almacen.empleados });
 export const useTipos = () => useQuery({ queryKey: ['tipos'], queryFn: almacen.tipos });
@@ -50,6 +55,7 @@ function useMutacion(fn, claves) {
 export const useCrearRegistro = () => useMutacion((datos, usuario) => almacen.crearRegistro({ ...datos, usuario }), [['registros']]);
 /** Recibe una lista de ids (uno o varios). */
 export const useEliminarRegistros = () => useMutacion((ids, usuario) => almacen.eliminarRegistros(ids, usuario), [['registros']]);
+export const useGuardarParametros = () => useMutacion((cambios, usuario) => almacen.guardarParametros(cambios, usuario), [['parametros']]);
 export const useCerrarSemana = () => useMutacion((semana, usuario) => almacen.cerrarSemana(semana, usuario), [['semanas-cerradas']]);
 export const useCrearEmpleado = () => useMutacion((datos, usuario) => almacen.crearEmpleado(datos, usuario), [['empleados']]);
 export const useCambiarActivo = () => useMutacion(({ id, activo }, usuario) => almacen.cambiarActivo(id, activo, usuario), [['empleados']]);
