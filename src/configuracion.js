@@ -1,5 +1,5 @@
 // Modo de prueba (npm run build:prueba, que usan las pruebas de Playwright): datos de la demo en memoria
-// y "hoy" fijo en el sábado 10 oct 2026, para que las pantallas se comparen contra la demo.
+// y "hoy" fijo en el martes 13 oct 2026 (semana en captura: la 41, la de la demo).
 // En producción no hay nada fijo: los datos vienen de la API y "hoy" es la fecha de Mérida.
 const entorno = import.meta.env ?? {};
 export const DATOS_PRUEBA = entorno.VITE_DATOS_PRUEBA === '1';

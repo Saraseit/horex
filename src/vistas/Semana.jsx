@@ -20,7 +20,7 @@ import {
 import { porDia, porEmpleado, sumar } from '../logica/agregados.js';
 import {
   DIAS_CORTOS, claveSemana, compararSemanas, desplazarSemana, diasDeSemana, etiquetaSemana, hoy, indiceDia,
-  leerClaveSemana, parseD, rangoSemanaTexto, semanaISO, semanasParaElegir,
+  leerClaveSemana, parseD, rangoSemanaTexto, semanaCaptura, semanasParaElegir,
 } from '../logica/fechas.js';
 import { fechaLarga, fmtHoras, fmtMoneda, fmtTarifa, nombreCorto, redondear1, resumenComidas } from '../logica/formato.js';
 import { COMIDAS } from '../logica/reglas.js';
@@ -30,7 +30,7 @@ const DOMINGO = 6;
 
 export default function Semana() {
   const params = useParams();
-  const actual = semanaISO(hoy());
+  const actual = semanaCaptura();
   const seleccion = params.anio && params.semana
     ? { anio: Number(params.anio), semana: Number(params.semana) }
     : actual;
@@ -131,8 +131,9 @@ function ContenidoSemana({ seleccion, actual }) {
       return <ConfirmacionEnLinea alConfirmar={() => eliminarRegistros([r.id])} alCancelar={() => setConfirmarId(null)} ocupado={eliminar.isPending} />;
     }
     return (
-      <span className="toolbar" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+      <span className="acciones">
         {recibo}
+        <button type="button" className="btn btn-ghost btn-xs" onClick={() => navegar(`/registrar?editar=${r.id}`)}>Editar</button>
         <button type="button" className="btn btn-ghost btn-xs" onClick={() => setConfirmarId(r.id)}>Eliminar</button>
       </span>
     );
@@ -159,7 +160,7 @@ function ContenidoSemana({ seleccion, actual }) {
       celda: (r) => (r[c.clave] ? fmtMoneda(r[`importe_${c.clave}`]) : <span className="faint">—</span>),
     })),
     { id: 'total', encabezado: 'Total', tipo: 'num', celda: (r) => <b>{fmtMoneda(r.total)}</b> },
-    { id: 'capturo', encabezado: 'Capturó', claseCelda: 'faint', estiloCelda: { fontSize: 12 }, celda: (r) => r.capturado_por_nombre },
+    { id: 'capturo', encabezado: 'Capturó', claseCelda: 'faint capturo', estiloCelda: { fontSize: 12 }, celda: (r) => <span title={r.capturado_por_nombre}>{r.capturado_por_nombre}</span> },
     { id: 'accion', encabezado: '', estiloCelda: { textAlign: 'right' }, celda: accion },
   ];
   const seleccionados = detalle.filter((r) => marcados.tiene(r.id));

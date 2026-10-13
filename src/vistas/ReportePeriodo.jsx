@@ -12,8 +12,8 @@ import Tarjeta from '../componentes/Tarjeta.jsx';
 import { useEmpleados, useRegistrosRango, useSemanasConDatos, useTipos } from '../datos/consultas.js';
 import { barrasDelRango, domingos, porGrupo, porTipo, sumar, top } from '../logica/agregados.js';
 import {
-  anioDe, claveSemana, compararSemanas, desplazarSemana, etiquetaSemana, fechasDeSemanas, hoy, leerClaveSemana,
-  mesAnterior, mismaSemana, nombreMes, semanaISO, semanasDelMes, semanasEntre, semanasParaElegir,
+  anioDe, claveSemana, compararSemanas, desplazarSemana, etiquetaSemana, fechasDeSemanas, leerClaveSemana,
+  diasDeSemana, mesAnterior, mismaSemana, nombreMes, semanaCaptura, semanasDelMes, semanasEntre, semanasParaElegir,
 } from '../logica/fechas.js';
 import { fechaCorta, fmtHoras, fmtMoneda, nombreCorto, plural, resumenComidas } from '../logica/formato.js';
 import { COMIDAS, etiquetaTipo } from '../logica/reglas.js';
@@ -25,23 +25,23 @@ const menor = (a, b) => (compararSemanas(a, b) <= 0 ? a : b);
  * Atajos, siempre en semanas completas de lunes a domingo. Un mes son las semanas que tienen su jueves
  * en ese mes (ninguna semana se parte entre dos meses).
  */
-function atajos(hoyF, actual) {
-  const anterior = semanasDelMes(mesAnterior(hoyF));
-  const esteMes = semanasDelMes(hoyF);
+function atajos(fechaRef, actual) {
+  const anterior = semanasDelMes(mesAnterior(fechaRef));
+  const esteMes = semanasDelMes(fechaRef);
   return [
     { etiqueta: 'Semana actual', desde: actual, hasta: actual },
     { etiqueta: 'Últimas 4 semanas', desde: desplazarSemana(actual, -3), hasta: actual },
-    { etiqueta: nombreMes(mesAnterior(hoyF)), desde: anterior.desde, hasta: anterior.hasta },
-    { etiqueta: nombreMes(hoyF), desde: menor(esteMes.desde, actual), hasta: menor(esteMes.hasta, actual) },
+    { etiqueta: nombreMes(mesAnterior(fechaRef)), desde: anterior.desde, hasta: anterior.hasta },
+    { etiqueta: nombreMes(fechaRef), desde: menor(esteMes.desde, actual), hasta: menor(esteMes.hasta, actual) },
   ];
 }
 
 export default function ReportePeriodo() {
   const [busqueda, setBusqueda] = useSearchParams();
   const navegar = useNavigate();
-  const hoyF = hoy();
-  const actual = semanaISO(hoyF);
-  const rapidos = atajos(hoyF, actual);
+  // Todo se mide desde la semana en captura (la pasada); los meses, desde su jueves.
+  const actual = semanaCaptura();
+  const rapidos = atajos(diasDeSemana(actual.anio, actual.semana)[3], actual);
   const leer = (k, defecto) => (CLAVE_VALIDA.test(busqueda.get(k) ?? '') ? menor(leerClaveSemana(busqueda.get(k)), actual) : defecto);
   let desde = leer('desde', rapidos[1].desde);
   let hasta = leer('hasta', rapidos[1].hasta);

@@ -112,6 +112,50 @@ export const almacen = {
     return responder(conEmpleado(registro));
   },
 
+  registro(id) {
+    const r = vigentes().find((x) => x.id === id);
+    return r ? responder(conEmpleado(r)) : fallar('El registro no existe o fue eliminado.');
+  },
+
+  /** Igual que el trigger de edición: tarifa nueva sólo si cambia tipo o fecha; montos de comidas intactos. */
+  editarRegistro(id, datos, usuario) {
+    try { exigirSupervisor(usuario); } catch (e) { return fallar(e.message); }
+    const r = vigentes().find((x) => x.id === id);
+    if (!r) return fallar('El registro no existe o fue eliminado.');
+    if (!datos.fecha || datos.fecha > hoy()) return fallar('No se pueden capturar fechas futuras.');
+    const empleado = estado.empleados.find((e) => e.id === r.empleado_id);
+    const tipoClave = empleado.genera_he ? datos.tipo_clave || null : null;
+    const horas = tipoClave ? Number(datos.horas) : 0;
+    if (!tipoClave && !(datos.desayuno || datos.almuerzo || datos.cena)) return fallar('Un registro sin horas extra debe llevar al menos un alimento.');
+    if (tipoClave && !(horas > 0 && horas <= 16)) return fallar('Las horas deben estar entre 0 y 16.');
+    const manual = !!datos.tarifa_manual && !!tipoClave;
+    let tarifa = 0;
+    if (manual) {
+      if (!String(datos.nota ?? '').trim()) return fallar('La tarifa manual necesita una nota que explique el motivo.');
+      tarifa = Number(datos.tarifa_aplicada);
+    } else if (tipoClave) {
+      const recalcular = r.tarifa_manual || !r.tipo_clave || r.tipo_clave !== tipoClave || r.fecha !== datos.fecha;
+      tarifa = recalcular
+        ? calcularTarifa({ empleado, fecha: datos.fecha, tipoClave, tipos: estado.tipos, parametros: estado.parametros }).tarifa
+        : r.tarifa_aplicada;
+    }
+    const editado = completarRegistro({
+      ...r,
+      fecha: datos.fecha,
+      tipo_clave: tipoClave,
+      horas,
+      tarifa_aplicada: tarifa,
+      tarifa_manual: manual,
+      nota: manual ? String(datos.nota).trim() : null,
+      desayuno: !!datos.desayuno,
+      almuerzo: !!datos.almuerzo,
+      cena: !!datos.cena,
+      editado_at: new Date().toISOString(),
+    });
+    estado.registros[estado.registros.indexOf(r)] = editado;
+    return responder(conEmpleado(editado));
+  },
+
   /** Borrado lógico de uno o varios registros (el supervisor, también en semanas cerradas). Todo o nada. */
   eliminarRegistros(ids, usuario) {
     try { exigirSupervisor(usuario); } catch (e) { return fallar(e.message); }

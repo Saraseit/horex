@@ -20,7 +20,7 @@ import {
   useConteos, useEliminarRegistros, useEmpleados, useRegistrosEmpleado, useTipos,
 } from '../datos/consultas.js';
 import { barrasDelRango, domingos, porTipo, sumar } from '../logica/agregados.js';
-import { desplazarSemana, fechasDeSemanas, hoy, semanaISO, semanasEntre } from '../logica/fechas.js';
+import { desplazarSemana, fechasDeSemanas, hoy, semanaCaptura, semanasEntre } from '../logica/fechas.js';
 import { fechaLarga, fmtHoras, fmtMoneda, fmtTarifa, resumenComidas, siNo } from '../logica/formato.js';
 import { COMIDAS, etiquetaTipo } from '../logica/reglas.js';
 import { useSesion } from '../sesion/contexto.js';
@@ -49,7 +49,7 @@ export default function ReporteEmpleado() {
   const [busqueda, setBusqueda] = useSearchParams();
   const navegar = useNavigate();
   const rango = RANGOS.some((r) => r.valor === busqueda.get('rango')) ? busqueda.get('rango') : '4';
-  const actual = semanaISO(hoy());
+  const actual = semanaCaptura();
   const { desde, hasta, semanas, descripcion } = calcularRango(rango, actual);
   const toast = useToast();
   const { esSupervisor } = useSesion();
@@ -129,7 +129,12 @@ export default function ReporteEmpleado() {
       encabezado: '',
       estiloCelda: { textAlign: 'right' },
       celda: (r) => (
-        <button type="button" className="btn btn-ghost btn-xs" disabled={recibos.generando} onClick={() => recibos.descargar([r], fechaPago)}>Recibo</button>
+        <span className="acciones">
+          <button type="button" className="btn btn-ghost btn-xs" disabled={recibos.generando} onClick={() => recibos.descargar([r], fechaPago)}>Recibo</button>
+          {esSupervisor && (
+            <button type="button" className="btn btn-ghost btn-xs" onClick={() => navegar(`/registrar?editar=${r.id}`)}>Editar</button>
+          )}
+        </span>
       ),
     },
   ];

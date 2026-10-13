@@ -8,7 +8,7 @@ import { useToast } from '../componentes/useToast.js';
 import { useEmpleados, useRegistrosRango, useSemanasConDatos, useTipos } from '../datos/consultas.js';
 import { FORMATOS_EXPORTACION, aCSV, aTSV, aXLSX, datosExport, nombreArchivo } from '../logica/exportar.js';
 import {
-  claveSemana, compararSemanas, etiquetaSemana, fechasDeSemanas, hoy, leerClaveSemana, semanaISO, semanasParaElegir,
+  claveSemana, compararSemanas, etiquetaSemana, fechasDeSemanas, leerClaveSemana, semanaCaptura, semanasParaElegir,
 } from '../logica/fechas.js';
 import { fmtMoneda, plural } from '../logica/formato.js';
 
@@ -20,7 +20,7 @@ export default function Exportar() {
   const [busqueda, setBusqueda] = useSearchParams();
   const [respaldoCopia, setRespaldoCopia] = useState(null);
   const [generando, setGenerando] = useState(false);
-  const actual = semanaISO(hoy());
+  const actual = semanaCaptura();
   const leer = (k) => (CLAVE_VALIDA.test(busqueda.get(k) ?? '') ? leerClaveSemana(busqueda.get(k)) : actual);
   const desde = leer('desde');
   const hasta = leer('hasta');

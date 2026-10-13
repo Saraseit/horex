@@ -209,6 +209,9 @@ th.sun,td.sun{background:color-mix(in srgb,var(--accent-light) 55%,transparent)}
 :root[data-theme="dark"] .login-logo{color:var(--fg)}
 
 /* ── Agregado en Horex: tablas con muchas columnas (comidas por separado) caben en 1366 px ── */
-.tbl.compacta th,.tbl.compacta td{padding-left:7px;padding-right:7px}
+.tbl.compacta th,.tbl.compacta td{padding-left:6px;padding-right:6px}
+.tbl .acciones{display:flex;justify-content:flex-end;gap:4px}
+.tbl .acciones .btn{padding:3px 6px}
+.tbl td.capturo{max-width:72px;overflow:hidden;text-overflow:ellipsis}
 .tbl.compacta td:first-child,.tbl.compacta th:first-child{padding-left:16px}
 .tbl.compacta td:last-child,.tbl.compacta th:last-child{padding-right:16px}

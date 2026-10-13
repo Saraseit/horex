@@ -38,6 +38,12 @@ export const useRegistrosDia = (empleadoId, fecha) => useQuery({
   enabled: !!empleadoId && !!fecha,
 });
 
+export const useRegistro = (id) => useQuery({
+  queryKey: ['registros', 'uno', id],
+  queryFn: () => almacen.registro(id),
+  enabled: !!id,
+});
+
 export const useRegistrosRecientes = (limite = 7) => useQuery({
   queryKey: ['registros', 'recientes', limite],
   queryFn: () => almacen.recientes(limite),
@@ -53,6 +59,7 @@ function useMutacion(fn, claves) {
 }
 
 export const useCrearRegistro = () => useMutacion((datos, usuario) => almacen.crearRegistro({ ...datos, usuario }), [['registros']]);
+export const useEditarRegistro = () => useMutacion(({ id, ...datos }, usuario) => almacen.editarRegistro(id, datos, usuario), [['registros']]);
 /** Recibe una lista de ids (uno o varios). */
 export const useEliminarRegistros = () => useMutacion((ids, usuario) => almacen.eliminarRegistros(ids, usuario), [['registros']]);
 export const useGuardarParametros = () => useMutacion((cambios, usuario) => almacen.guardarParametros(cambios, usuario), [['parametros']]);

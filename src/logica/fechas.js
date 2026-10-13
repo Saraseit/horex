@@ -23,6 +23,12 @@ export function hoyMerida(ahora = new Date()) {
 
 export const hoy = () => HOY_FIJO ?? hoyMerida();
 
+/**
+ * Semana en captura: la semana pasada. En nómina se paga cada semana lo trabajado la anterior, así que en la
+ * semana 42 se captura (y se paga) la 41. Es la "semana actual" de la app.
+ */
+export const semanaCaptura = (fecha = hoy()) => desplazarSemana(semanaISO(fecha), -1);
+
 /** Semana ISO (lunes a domingo), igual que ISOWEEKNUM de Excel y extract(week) de Postgres. */
 export function semanaISO(fecha) {
   const d = parseD(fecha);

@@ -18,9 +18,11 @@ export const fuenteApi = {
   semanasConDatos: () => pedir('GET', '/registros/semanas'),
   semanasCerradas: () => pedir('GET', '/semanas-cerradas'),
   conteos: () => pedir('GET', '/registros/conteos'),
+  registro: (id) => pedir('GET', `/registros/${id}`),
 
   // El usuario lo conoce la API por la cookie: el segundo argumento sólo existe por el almacén de prueba.
   crearRegistro: (datos) => pedir('POST', '/registros', { ...datos, usuario: undefined }),
+  editarRegistro: (id, datos) => pedir('PATCH', `/registros/${id}`, datos),
   eliminarRegistros: (ids) => pedir('POST', '/registros/eliminar', { ids }),
   cerrarSemana: ({ anio, semana }) => pedir('POST', '/semanas-cerradas', { anio, semana }),
   crearEmpleado: (datos) => pedir('POST', '/empleados', datos),
