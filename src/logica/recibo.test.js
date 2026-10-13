@@ -1,36 +1,56 @@
 import { describe, expect, it } from 'vitest';
-import { conceptosRecibo, generarRecibos, nombreArchivoRecibos } from './recibo.js';
+import { agruparRecibos, generarRecibos, nombreArchivoRecibos } from './recibo.js';
 
-const registro = {
-  id: 7, nombre: 'Delmer Adolfo Gamboa Arjona', fecha: '2026-10-11', anio_iso: 2026, semana: 41,
-  tipo_etiqueta: 'Especial foránea', horas: 8, tarifa_aplicada: 80, importe_he: 640,
-  desayuno: true, almuerzo: false, cena: true, importe_desayuno: 60, importe_almuerzo: 0, importe_cena: 70,
-};
+const base = { empleado_id: 19, nombre: 'Delmer Adolfo Gamboa Arjona', anio_iso: 2026, semana: 41, desayuno: false, almuerzo: false, cena: false, importe_desayuno: 0, importe_almuerzo: 0, importe_cena: 0 };
+const he = (id, fecha, horas, tarifa, extra = {}) => ({
+  ...base, id, fecha, tipo_etiqueta: 'Normal local', horas, tarifa_aplicada: tarifa, importe_he: horas * tarifa, ...extra,
+});
+const registros = [
+  he(3, '2026-10-07', 0.5, 60),
+  he(1, '2026-10-05', 2, 60, { desayuno: true, importe_desayuno: 60 }),
+  he(2, '2026-10-06', 1, 60, { cena: true, importe_cena: 70, almuerzo: true, importe_almuerzo: 50 }),
+];
+const otro = { ...he(9, '2026-10-05', 1, 60), empleado_id: 1, nombre: 'Adolfo Sulub Garcia' };
 
-describe('recibo', () => {
-  it('lista cada concepto pagado con su importe', () => {
-    const { lineas, total } = conceptosRecibo(registro);
-    expect(lineas.map((l) => [l.concepto, l.importe])).toEqual([['Horas extra', 640], ['Desayuno', 60], ['Cena', 70]]);
-    expect(lineas[0].detalle).toBe('Especial foránea · 8 h × $80.00');
-    expect(total).toBe(770);
+describe('agruparRecibos', () => {
+  it('un recibo por empleado y cuenta: horas extra; desayuno y cena; almuerzo', () => {
+    const recibos = agruparRecibos(registros);
+    expect(recibos.map((r) => [r.cuenta, r.lineas.length, r.total])).toEqual([['HE', 3, 210], ['DC', 2, 130], ['AL', 1, 50]]);
   });
 
-  it('un registro de sólo alimentos no lleva horas extra', () => {
-    const { lineas, total } = conceptosRecibo({ ...registro, horas: 0, importe_he: 0, cena: false });
-    expect(lineas.map((l) => l.concepto)).toEqual(['Desayuno']);
-    expect(total).toBe(60);
+  it('las líneas van por fecha y llevan su importe', () => {
+    const [horas, comidas] = agruparRecibos(registros);
+    expect(horas.lineas.map((l) => [l.fecha, l.importe])).toEqual([['2026-10-05', 120], ['2026-10-06', 60], ['2026-10-07', 30]]);
+    expect(horas.lineas[0].concepto).toBe('Normal local · 2 h × $60.00');
+    expect(comidas.lineas.map((l) => `${l.fecha} ${l.concepto}`)).toEqual(['2026-10-05 Desayuno', '2026-10-06 Cena']);
   });
 
+  it('varios empleados: ordenados por nombre', () => {
+    const recibos = agruparRecibos([...registros, otro]);
+    expect(recibos.map((r) => `${r.nombre.split(' ')[0]}-${r.cuenta}`)).toEqual(['Adolfo-HE', 'Delmer-HE', 'Delmer-DC', 'Delmer-AL']);
+  });
+
+  it('un registro de sólo alimentos no genera recibo de horas extra', () => {
+    const soloComida = { ...base, id: 5, fecha: '2026-10-05', tipo_etiqueta: 'Solo alimentos', horas: 0, importe_he: 0, cena: true, importe_cena: 70 };
+    expect(agruparRecibos([soloComida]).map((r) => r.cuenta)).toEqual(['DC']);
+  });
+});
+
+describe('archivo de recibos', () => {
   it('nombre del archivo', () => {
-    expect(nombreArchivoRecibos([registro])).toBe('Recibo_Delmer_Adolfo_Gamboa_Arjona_2026-10-11.pdf');
-    expect(nombreArchivoRecibos([registro, { ...registro, id: 8 }, { ...registro, id: 9 }])).toBe('Recibos_Semana41_3.pdf');
+    expect(nombreArchivoRecibos([registros[0]])).toBe('Recibo_Delmer_Adolfo_Gamboa_Arjona_S41_HE.pdf');
+    expect(nombreArchivoRecibos(registros)).toBe('Recibos_Semana41_3.pdf');
   });
 
-  it('genera un PDF con dos recibos por hoja', async () => {
-    const blob = await generarRecibos([registro, { ...registro, id: 8 }, { ...registro, id: 9 }], { fechaPago: '2026-10-16' });
-    const texto = new TextDecoder('latin1').decode(await blob.arrayBuffer());
-    expect(texto.startsWith('%PDF')).toBe(true);
-    const paginas = texto.split('/Type /Page').length - 1 - (texto.split('/Type /Pages').length - 1);
-    expect(paginas).toBe(2);
+  it('dos recibos por hoja; uno largo ocupa la hoja completa', async () => {
+    const paginas = async (regs) => {
+      const blob = await generarRecibos(regs, { fechaPago: '2026-10-16' });
+      const texto = new TextDecoder('latin1').decode(await blob.arrayBuffer());
+      expect(texto.startsWith('%PDF')).toBe(true);
+      return texto.split('/Type /Page').length - 1 - (texto.split('/Type /Pages').length - 1);
+    };
+    expect(await paginas(registros)).toBe(2); // 3 recibos: 2 en la primera hoja, 1 en la segunda
+    const largo = Array.from({ length: 10 }, (_, i) => he(100 + i, `2026-10-0${(i % 7) + 5}`.replace('-01', '-1'), 1, 60));
+    expect(await paginas([...largo, otro])).toBe(2); // 10 líneas: hoja completa; Adolfo en la siguiente
   }, 30_000);
 });
