@@ -100,7 +100,10 @@ function FormularioRegistro({ edicion }) {
   const importe = conHoras ? horas * tarifa : 0;
   const domingo = esDomingo(fecha);
   const tarifaEspecial = Number(tipos.find((t) => t.clave === 'ESPECIAL_LOCAL')?.tarifa ?? 0);
-  const duplicado = !!empleado && (delDiaQ.data ?? []).some((r) => r.id !== edicion?.id);
+  // Un empleado puede tener varios registros el mismo día (uno por tipo de hora): se listan, no se bloquean.
+  const delDia = empleado ? (delDiaQ.data ?? []).filter((r) => r.id !== edicion?.id) : [];
+  // Una comida que ya está en otro registro de ese día se pagaría dos veces.
+  const comidasRepetidas = elegidos.filter((a) => delDia.some((r) => r[a.clave]));
   const ocupado = crear.isPending || editar.isPending;
   const valido = !!empleado && !!fecha && fecha <= fechaMaxima && !ocupado && (conHoras || soloComida);
 
@@ -120,7 +123,8 @@ function FormularioRegistro({ edicion }) {
     ...(conHoras && usaManual && { tarifa_manual: true, tarifa_aplicada: tarifaManual, nota: manual.nota.trim() }),
   });
 
-  function guardar() {
+  // otroTipo: guarda y deja empleado y fecha para capturar otro tipo de hora del mismo día.
+  function guardar(otroTipo = false) {
     if (edicion) {
       editar.mutate({ id: edicion.id, ...datos() }, {
         onSuccess: (r) => {
@@ -135,12 +139,16 @@ function FormularioRegistro({ edicion }) {
       onSuccess: (r) => {
         setUltimoId(r.id);
         toast(`Guardado: ${nombreCorto(empleado.nombre)} · ${fmtMoneda(r.total)}`);
-        setEmpleadoId(null);
         setHorasTexto('');
         setTipo(null);
         setAlimentos(SIN_ALIMENTOS);
         setManual(SIN_MANUAL);
-        setVueltaBuscador((v) => v + 1);
+        if (otroTipo) {
+          horasRef.current?.focus();
+        } else {
+          setEmpleadoId(null);
+          setVueltaBuscador((v) => v + 1);
+        }
       },
       onError: (e) => setError(e.message),
     });
@@ -191,9 +199,11 @@ function FormularioRegistro({ edicion }) {
             {sinHE && (
               <Alerta tipo="amber"><strong>{empleado.puesto}</strong> no genera horas extra. Solo registra desayuno o cena si aplica.</Alerta>
             )}
-            {duplicado && (
-              <Alerta tipo="warn">
-                <strong>{nombreCorto(empleado.nombre)}</strong> ya tiene un registro el {fechaLarga(fecha)}. Revisa en <em>Semana actual</em> antes de guardar.
+            {delDia.length > 0 && (
+              <Alerta tipo="info" icono="◆">
+                <strong>{nombreCorto(empleado.nombre)}</strong> ya tiene {delDia.length === 1 ? 'un registro' : `${delDia.length} registros`} el {fechaLarga(fecha)}:
+                {' '}{delDia.map((r) => (r.horas ? `${r.tipo_etiqueta} ${fmtHoras(r.horas)}` : r.tipo_etiqueta)).join(' · ')}.
+                {' '}Puedes agregar otro tipo de hora; cada uno se guarda como registro aparte.
               </Alerta>
             )}
           </Tarjeta>
@@ -300,10 +310,20 @@ function FormularioRegistro({ edicion }) {
             </div>
             <div className="resumen-total"><span className="r-label">Total registro</span><span className="r-value">{fmtMoneda(importe + importeAlimentos)}</span></div>
             <div className="regla-note">{nota}</div>
+            {comidasRepetidas.length > 0 && (
+              <Alerta tipo="warn" estilo={{ marginTop: 8 }}>
+                {comidasRepetidas.map((a) => a.texto).join(' y ')} ya {comidasRepetidas.length === 1 ? 'está' : 'están'} en otro registro de ese día: se pagaría dos veces.
+              </Alerta>
+            )}
             {error && <Alerta tipo="warn" estilo={{ marginTop: 8 }}>{error}</Alerta>}
-            <button type="button" className="btn btn-primary btn-block" disabled={!valido} style={{ marginTop: 8 }} onClick={guardar}>
+            <button type="button" className="btn btn-primary btn-block" disabled={!valido} style={{ marginTop: 8 }} onClick={() => guardar()}>
               {edicion ? 'Guardar cambios' : 'Guardar registro'}
             </button>
+            {!edicion && empleado && !sinHE && (
+              <button type="button" className="btn btn-ghost btn-block" disabled={!valido} style={{ marginTop: 8 }} onClick={() => guardar(true)}>
+                Guardar y capturar otro tipo
+              </button>
+            )}
             {edicion && (
               <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={() => navegar(-1)}>Cancelar</button>
             )}

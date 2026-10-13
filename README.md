@@ -163,7 +163,7 @@ variantes de supervisor de Semana, Empleados y Tarifas (34 en total). Se regener
   todo o nada, nunca en semanas cerradas. El borrado sigue siendo lógico: el registro conserva quién y
   cuándo lo eliminó.
 - **Comidas por separado** (pedido del usuario, 13 oct 2026): desayuno, almuerzo y cena tienen cada uno su
-  monto (hoy $60, $50 y $70), editable en Tarifas y reglas. Cada registro guarda los tres montos vigentes al
+  monto (hoy $60, $60 y $70), editable en Tarifas y reglas. Cada registro guarda los tres montos vigentes al
   capturarlo. Tablas, reportes, historial y exportación muestran cantidad y monto de cada comida.
 - **El supervisor puede eliminar cualquier registro**, también de semanas cerradas (pedido del usuario; el
   prompt original no lo permitía). Una semana cerrada sigue sin aceptar capturas nuevas.
@@ -180,6 +180,9 @@ variantes de supervisor de Semana, Empleados y Tarifas (34 en total). Se regener
   comidas conservan el monto con que se capturaron. Queda quién editó y cuándo (`editado_por`, `editado_at`).
 - **Registro de sólo comida** para cualquier empleado: sin horas ni tipo y con al menos una comida. Un tipo de
   hora se quita volviendo a tocarlo.
+- **Varios tipos de hora el mismo día:** cada tipo es un registro aparte del mismo empleado y fecha. Registrar
+  HE lista lo que ya tiene ese día (aviso informativo, no bloquea), "Guardar y capturar otro tipo" conserva
+  empleado y fecha, y avisa si una comida ya está en otro registro del día (se pagaría dos veces).
 - **Plantilla real:** `db/semilla.sql` tiene los 38 empleados únicos de `empleadosactivos horex.pdf` con
   nombres y puestos homogéneos ("Operador cargador", no "OPERADO CARGADOR"). Duplicados unidos: Erik/Erick Nah
   Chan, Isac/Isaac Cante Baak, Galue Cetina (dos formas), May Cerantes/Cervantes, Yahir Nah Molina (dos formas),

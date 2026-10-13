@@ -39,12 +39,14 @@ test.describe('Registrar HE', () => {
     await expect(page.locator('#fecha')).toHaveValue('2026-10-05');
   });
 
-  test('avisa del duplicado sin bloquear', async ({ page }) => {
+  test('lista los registros del día sin bloquear', async ({ page }) => {
     await page.goto('/registrar');
     await page.locator('#fecha').fill('2026-10-10');
     await page.locator('#emp-search').fill('gamboa');
     await page.keyboard.press('Enter');
-    await expect(page.locator('.alert.warn')).toContainText('Delmer Adolfo Gamboa ya tiene un registro el sáb 10 de oct');
+    await expect(page.locator('.alert.info')).toContainText('Delmer Adolfo Gamboa ya tiene');
+    await expect(page.locator('.alert.info')).toContainText('el sáb 10 de oct');
+    await expect(page.locator('.alert.info')).toContainText('Puedes agregar otro tipo de hora');
     await page.locator('#num-horas').fill('1');
     await page.getByRole('button', { name: /Normal local/ }).click();
     await expect(page.getByRole('button', { name: 'Guardar registro' })).toBeEnabled();
@@ -70,7 +72,7 @@ test.describe('Registrar HE', () => {
     await page.locator('#emp-search').fill('silveira');
     await page.keyboard.press('Enter');
     await page.locator('#fecha').fill('2026-09-27');
-    await expect(page.locator('.alert.info')).toContainText('Domingo');
+    await expect(page.locator('.alert.info', { hasText: 'Domingo' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Especial local/ })).toContainText('$70/hr');
     await page.locator('#num-horas').fill('4');
     await page.getByRole('button', { name: /Especial local/ }).click();
@@ -357,5 +359,38 @@ test.describe('Primera versión operativa', () => {
     await expect(normal).toHaveAttribute('aria-pressed', 'true');
     await normal.click();
     await expect(normal).toHaveAttribute('aria-pressed', 'false');
+  });
+});
+
+test.describe('Varios tipos de hora el mismo día', () => {
+  test('guardar y capturar otro tipo conserva empleado y fecha', async ({ page }) => {
+    await page.goto('/registrar');
+    await page.locator('#fecha').fill('2026-10-08');
+    await page.locator('#emp-search').fill('chan itza');
+    await page.keyboard.press('Enter');
+    await page.locator('#num-horas').fill('3');
+    await page.getByRole('button', { name: /Muerta especial/ }).click();
+    await page.locator('.alimento-toggle', { hasText: 'Desayuno' }).click();
+    await page.getByRole('button', { name: 'Guardar y capturar otro tipo' }).click();
+    await expect(page.locator('.toast')).toContainText('Guardado: Juan Gabriel Chan');
+    // Sigue el mismo empleado y la misma fecha; horas, tipo y comidas quedan limpios.
+    await expect(page.locator('#emp-search')).toHaveValue(/Juan Gabriel Chan/);
+    await expect(page.locator('#fecha')).toHaveValue('2026-10-08');
+    await expect(page.locator('#num-horas')).toHaveValue('');
+    await expect(page.locator('#num-horas')).toBeFocused();
+    await expect(page.locator('.alert.info')).toContainText('Muerta especial 3 h');
+    await page.locator('#num-horas').fill('5');
+    await page.getByRole('button', { name: /Especial foránea/ }).click();
+    // El desayuno ya se pagó en el otro registro del día.
+    await page.locator('.alimento-toggle', { hasText: 'Desayuno' }).click();
+    await expect(page.locator('.alert.warn')).toContainText('Desayuno ya está en otro registro de ese día');
+    await page.locator('.alimento-toggle', { hasText: 'Desayuno' }).click();
+    await page.getByRole('button', { name: 'Guardar registro' }).click();
+    await expect(page.locator('#emp-search')).toHaveValue('');
+    // Sin recargar: el almacén de prueba vive en memoria.
+    await page.getByRole('button', { name: 'Ver semana' }).click();
+    const filas = page.locator('tbody tr').filter({ hasText: 'Juan Gabriel Chan' }).filter({ has: page.locator('input[type=checkbox]') });
+    await expect(filas.filter({ hasText: 'Muerta especial' })).toHaveCount(1);
+    await expect(filas.filter({ hasText: 'Especial foránea' })).toHaveCount(1);
   });
 });
