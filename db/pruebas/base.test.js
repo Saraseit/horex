@@ -46,7 +46,7 @@ describe.skipIf(!URL_API || !URL_DUENO)('base de datos (rama desarrollo, como ho
       // Como supervisor: tarifas y parámetros en su valor base (por si alguien los cambió en desarrollo).
       await c.query(`select set_config('horex.usuario_id', $1, true);
         update tipos_hora t set tarifa = (($2::json) ->> t.clave)::numeric;
-        update parametros set valor = case clave when 'monto_alimento' then 50 when 'tarifa_domingo_eventual' then 70 end;`
+        update parametros set valor = case clave when 'monto_desayuno' then 60 when 'monto_almuerzo' then 50 when 'monto_cena' then 70 when 'tarifa_domingo_eventual' then 70 end;`
         .replace('$1', `'${usuario.supervisor}'`).replace('$2', `'${JSON.stringify(TARIFAS_BASE)}'`));
       await c.query("select set_config('horex.usuario_id', $1, true)", [usuarioId ?? '']);
       return await fn(c);
@@ -95,8 +95,8 @@ describe.skipIf(!URL_API || !URL_DUENO)('base de datos (rama desarrollo, como ho
     it('ignora la tarifa que manda el cliente y fija alimentos y capturista', () => como(usuario.capturista, async (c) => {
       const { filas: [r] } = await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, tipo_clave: 'NORMAL_LOCAL', horas: 2, tarifa_aplicada: 999, cena: true });
       expect(Number(r.tarifa_aplicada)).toBe(60);
-      expect(Number(r.monto_alimento)).toBe(50);
-      expect(Number(r.total)).toBe(170);
+      expect(Number(r.importe_cena)).toBe(70);
+      expect(Number(r.total)).toBe(190);
       expect(r.capturado_por).toBe(usuario.capturista);
       expect(r.tarifa_manual).toBe(false);
     }));
@@ -112,7 +112,16 @@ describe.skipIf(!URL_API || !URL_DUENO)('base de datos (rama desarrollo, como ho
       expect(r.tipo_clave).toBeNull();
       expect(Number(r.horas)).toBe(0);
       expect(Number(r.tarifa_aplicada)).toBe(0);
-      expect(Number(r.total)).toBe(50);
+      expect(Number(r.total)).toBe(60);
+    }));
+
+    it('cada comida usa su propio monto vigente y lo guarda', () => como(usuario.supervisor, async (c) => {
+      await c.query("update parametros set valor = 65 where clave = 'monto_almuerzo'");
+      const { filas: [r] } = await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, tipo_clave: 'NORMAL_LOCAL', horas: 1, desayuno: true, almuerzo: true, cena: true });
+      expect([r.importe_desayuno, r.importe_almuerzo, r.importe_cena, r.importe_alimentos, r.total].map(Number)).toEqual([60, 65, 70, 195, 255]);
+      await c.query("update parametros set valor = 80 where clave = 'monto_cena'");
+      const { rows: [g] } = await c.query('select importe_cena from registros_horas where id = $1', [r.id]);
+      expect(Number(g.importe_cena)).toBe(70);
     }));
 
     it('una semana cerrada no acepta registros', () => como(usuario.supervisor, async (c) => {
@@ -165,7 +174,7 @@ describe.skipIf(!URL_API || !URL_DUENO)('base de datos (rama desarrollo, como ho
 
     it('no puede editar tarifas, parámetros ni empleados, ni cerrar semanas', () => como(usuario.capturista, async (c) => {
       expect((await intentar(c, "update tipos_hora set tarifa = 1 where clave = 'NORMAL_LOCAL'")).n).toBe(0);
-      expect((await intentar(c, "update parametros set valor = 1 where clave = 'monto_alimento'")).n).toBe(0);
+      expect((await intentar(c, "update parametros set valor = 1 where clave = 'monto_cena'")).n).toBe(0);
       expect((await intentar(c, 'update empleados set activo = false where id = $1', [empleado.fijo])).n).toBe(0);
       expect((await intentar(c, "insert into empleados (nombre, puesto, grupo, reclutador) values ('Prueba Nueva', 'Operador cargador', 'Eventual', 'EVENTUAL')")).error?.message).toMatch(/row-level security/);
       expect((await intentar(c, 'insert into semanas_cerradas (anio_iso, semana) values (2026, 41)')).error?.message).toMatch(/row-level security/);
@@ -188,7 +197,13 @@ describe.skipIf(!URL_API || !URL_DUENO)('base de datos (rama desarrollo, como ho
       expect(v.n).toBe(0);
     }));
 
-    it('no elimina en semana cerrada', () => como(usuario.supervisor, async (c) => {
+    it('también elimina en semana cerrada (pedido del usuario: el supervisor borra cualquier registro)', () => como(usuario.supervisor, async (c) => {
+      const { rows: [r] } = await c.query('select id from v_registros where anio_iso = 2026 and semana = 40 limit 1');
+      const { n } = await intentar(c, 'update registros_horas set eliminado_at = now() where id = $1', [r.id]);
+      expect(n).toBe(1);
+    }));
+
+    it('la capturista tampoco puede eliminar en semana cerrada', () => como(usuario.capturista, async (c) => {
       const { rows: [r] } = await c.query('select id from v_registros where anio_iso = 2026 and semana = 40 limit 1');
       const { n } = await intentar(c, 'update registros_horas set eliminado_at = now() where id = $1', [r.id]);
       expect(n).toBe(0);
