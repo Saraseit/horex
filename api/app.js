@@ -1,6 +1,7 @@
 // Aplicación Express de la API. Sin estado propio: todo vive en Postgres (RLS + triggers).
 import express from 'express';
 import { verificarContrasena } from './contrasenas.js';
+import { rutasDatos } from './datos.js';
 import { ErrorHttp, aRespuesta } from './errores.js';
 import { crearSesiones } from './sesion.js';
 
@@ -84,6 +85,10 @@ export function crearApp({ bd, secreto, produccion = false }) {
     sesiones.quitar(res);
     res.status(204).end();
   });
+
+  // Datos: todo exige sesión (sólo estas rutas; lo demás cae en el 404).
+  api.use(['/empleados', '/tipos', '/parametros', '/registros', '/semanas-cerradas'], requiereSesion);
+  api.use(rutasDatos(bd));
 
   api.use((req, res) => res.status(404).json({ error: 'No existe esa ruta de la API.' }));
   app.use('/api', api);

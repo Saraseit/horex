@@ -118,6 +118,84 @@ describe.skipIf(!URL_API || !CONTRASENA)('API de sesión (rama desarrollo)', () 
     expect((await entrar(correo, 'x')).status).toBe(429);
   });
 
+  describe('datos', () => {
+    let supervisor;
+    let capturista;
+    const pedir = (cookie, metodo, ruta, cuerpo) => fetch(`${base}/api${ruta}`, {
+      method: metodo,
+      headers: { cookie, ...(cuerpo && { 'Content-Type': 'application/json' }) },
+      body: cuerpo && JSON.stringify(cuerpo),
+    });
+    const json = async (cookie, metodo, ruta, cuerpo) => {
+      const res = await pedir(cookie, metodo, ruta, cuerpo);
+      return { estado: res.status, datos: await res.json().catch(() => null) };
+    };
+
+    beforeAll(async () => {
+      supervisor = cookieDe(await entrar('supervisor@prueba.horex'));
+      capturista = cookieDe(await entrar('capturista@prueba.horex'));
+    });
+
+    it('sin sesión no se ve nada', async () => {
+      expect((await fetch(`${base}/api/empleados`)).status).toBe(401);
+      expect((await fetch(`${base}/api/registros`)).status).toBe(401);
+    });
+
+    it('catálogos, parámetros y semanas', async () => {
+      const { datos: empleados } = await json(capturista, 'GET', '/empleados');
+      expect(empleados.length).toBeGreaterThanOrEqual(25);
+      expect(empleados[0]).toHaveProperty('genera_he');
+      const { datos: parametros } = await json(capturista, 'GET', '/parametros');
+      expect(Object.keys(parametros).sort()).toEqual(['monto_almuerzo', 'monto_cena', 'monto_desayuno', 'tarifa_domingo_eventual']);
+      const { datos: semanas } = await json(capturista, 'GET', '/registros/semanas');
+      expect(semanas).toContainEqual({ anio: 2026, semana: 41 });
+    });
+
+    it('registros de una semana con importes por comida y números (no texto)', async () => {
+      const { datos } = await json(capturista, 'GET', '/registros?anio=2026&semana=41');
+      expect(datos.length).toBeGreaterThan(0);
+      const r = datos[0];
+      expect(typeof r.total).toBe('number');
+      expect(r.fecha).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(r).toHaveProperty('importe_desayuno');
+      expect(r).toHaveProperty('nombre');
+    });
+
+    it('captura: la base calcula la tarifa; el supervisor elimina; todo o nada', async () => {
+      const { datos: empleados } = await json(supervisor, 'GET', '/empleados');
+      const fijo = empleados.find((e) => e.activo && e.genera_he && e.grupo === 'P. Fijo');
+      const nuevo = await json(capturista, 'POST', '/registros', {
+        empleado_id: fijo.id, fecha: '2026-10-05', tipo_clave: 'NORMAL_LOCAL', horas: 1.5, tarifa_aplicada: 999, desayuno: true,
+      });
+      expect(nuevo.estado).toBe(201);
+      expect(nuevo.datos).toMatchObject({ tarifa_aplicada: 60, importe_he: 90, desayuno: true, capturado_por_nombre: 'Capturista de prueba' });
+
+      expect((await json(capturista, 'POST', '/registros/eliminar', { ids: [nuevo.datos.id] })).estado).toBe(403);
+      expect(await json(supervisor, 'POST', '/registros/eliminar', { ids: [nuevo.datos.id] })).toEqual({ estado: 200, datos: { eliminados: 1 } });
+      const otraVez = await json(supervisor, 'POST', '/registros/eliminar', { ids: [nuevo.datos.id] });
+      expect(otraVez.estado).toBe(409);
+    });
+
+    it('rechazos de la base llegan con su mensaje', async () => {
+      const { datos: empleados } = await json(supervisor, 'GET', '/empleados');
+      const fijo = empleados.find((e) => e.activo && e.genera_he);
+      const futura = await json(capturista, 'POST', '/registros', { empleado_id: fijo.id, fecha: '2099-01-05', tipo_clave: 'NORMAL_LOCAL', horas: 1 });
+      expect(futura).toMatchObject({ estado: 400, datos: { error: 'No se pueden capturar fechas futuras.' } });
+      const cerrada = await json(capturista, 'POST', '/registros', { empleado_id: fijo.id, fecha: '2026-09-30', tipo_clave: 'NORMAL_LOCAL', horas: 1 });
+      expect(cerrada.datos.error).toMatch(/semana 40 está cerrada/);
+    });
+
+    it('sólo el supervisor cambia tarifas y montos de comidas', async () => {
+      expect((await json(capturista, 'PATCH', '/tipos', { cambios: { MUERTA: 31 } })).estado).toBe(403);
+      expect((await json(capturista, 'PATCH', '/parametros', { cambios: { monto_cena: 1 } })).estado).toBe(403);
+      const { datos: p } = await json(supervisor, 'GET', '/parametros');
+      expect(await json(supervisor, 'PATCH', '/parametros', { cambios: { monto_almuerzo: p.monto_almuerzo + 1 } }))
+        .toEqual({ estado: 200, datos: { cambiados: 1 } });
+      await json(supervisor, 'PATCH', '/parametros', { cambios: { monto_almuerzo: p.monto_almuerzo } });
+      expect((await json(supervisor, 'PATCH', '/parametros', { cambios: { inventado: 1 } })).estado).toBe(400);
+    });
+  });
+
   it('rutas desconocidas: 404 en JSON', async () => {
     const res = await fetch(`${base}/api/no-existe`);
     expect(res.status).toBe(404);
