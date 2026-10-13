@@ -209,10 +209,47 @@ describe.skipIf(!URL_API || !URL_DUENO)('base de datos (rama desarrollo, como ho
       expect(n).toBe(0);
     }));
 
-    it('no permite editar un registro (se corrige eliminando y recapturando)', () => como(usuario.supervisor, async (c) => {
+  });
+
+  describe('edición (supervisor)', () => {
+    const nuevo = (c, datos) => insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, tipo_clave: 'NORMAL_LOCAL', horas: 2, ...datos });
+
+    it('corrige horas y agrega una comida: conserva tarifa y montos de la captura', () => como(usuario.supervisor, async (c) => {
+      const { filas: [r] } = await nuevo(c, {});
+      await c.query("update tipos_hora set tarifa = 99 where clave = 'NORMAL_LOCAL'");
+      await c.query("update parametros set valor = 99 where clave = 'monto_cena'");
+      const { filas: [e] } = await intentar(c, 'update registros_horas set horas = 3, cena = true where id = $1 returning *', [r.id]);
+      expect([e.horas, e.tarifa_aplicada, e.importe_cena, e.total].map(Number)).toEqual([3, 60, 70, 250]);
+      expect(e.editado_por).toBe(usuario.supervisor);
+      expect(e.editado_at).not.toBeNull();
+    }));
+
+    it('si cambia el tipo o la fecha, recalcula la tarifa con la regla', () => como(usuario.supervisor, async (c) => {
+      const { filas: [r] } = await nuevo(c, {});
+      const { filas: [e] } = await intentar(c, "update registros_horas set tipo_clave = 'ESPECIAL_LOCAL' where id = $1 returning tarifa_aplicada", [r.id]);
+      expect(Number(e.tarifa_aplicada)).toBe(80);
+    }));
+
+    it('sin tipo de hora queda como sólo alimentos', () => como(usuario.supervisor, async (c) => {
+      const { filas: [r] } = await nuevo(c, {});
+      const { filas: [e] } = await intentar(c, 'update registros_horas set tipo_clave = null, desayuno = true where id = $1 returning *', [r.id]);
+      expect([e.tipo_clave, Number(e.horas), Number(e.total)]).toEqual([null, 0, 60]);
+    }));
+
+    it('no cambia el empleado ni acepta fechas futuras', () => como(usuario.supervisor, async (c) => {
+      const { filas: [r] } = await nuevo(c, {});
+      expect((await intentar(c, 'update registros_horas set fecha = hoy_merida() + 1 where id = $1', [r.id])).error?.message).toMatch(/fechas futuras/);
+      expect((await intentar(c, 'update registros_horas set empleado_id = $2 where id = $1', [r.id, empleado.eventual])).error?.message).toMatch(/permission denied/);
+    }));
+
+    it('la capturista no puede editar', () => como(usuario.capturista, async (c) => {
       const { rows: [r] } = await c.query('select id from v_registros where anio_iso = 2026 and semana = 41 limit 1');
-      const { error } = await intentar(c, 'update registros_horas set horas = 1 where id = $1', [r.id]);
-      expect(error?.message).toMatch(/permission denied/);
+      expect((await intentar(c, 'update registros_horas set horas = 1 where id = $1', [r.id])).n).toBe(0);
+    }));
+
+    it('un registro de sólo alimentos para quien sí genera horas extra', () => como(usuario.capturista, async (c) => {
+      const { filas: [r] } = await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, almuerzo: true });
+      expect([r.tipo_clave, Number(r.horas), Number(r.total)]).toEqual([null, 0, 50]);
     }));
   });
 
