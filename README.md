@@ -4,12 +4,9 @@ Control de horas extra y alimentos del personal operativo. Reemplaza el Google S
 El plan completo está en [docs/PROMPT_HOREX.md](docs/PROMPT_HOREX.md); la demo de referencia, en
 [docs/referencia/horex-demo.html](docs/referencia/horex-demo.html).
 
-**Estado:** fases 1 a 3 terminadas.
-- **Fase 1:** las 7 pantallas con la apariencia de la demo.
-- **Fase 2:** base de datos en Neon con las reglas, los permisos y las pruebas.
-- **Fase 3:** API, inicio de sesión y roles.
-
-Falta la Fase 4: las pantallas todavía leen los datos de prueba de la demo, en memoria, y no la base.
+**Estado:** en uso. Las pantallas leen y escriben en la base de Neon a través de la API, con login real.
+Producción tiene la plantilla real (38 empleados) y los 84 registros de la semana 41 importados del Excel.
+Los datos de la demo sólo existen en la rama `desarrollo` y en el modo de prueba de Playwright.
 
 ## Cómo correrlo
 
@@ -40,6 +37,9 @@ En desarrollo se entra con los usuarios de prueba de la rama `desarrollo` (`supe
 | `npm run db:rol-api -- --destino …` | Contraseña nueva para el rol `horex_api`; guarda su cadena en `.env` |
 | `npm run db:semilla-demo -- --destino desarrollo [--reiniciar]` | Datos de la demo y usuarios de prueba. Se niega a correr en producción |
 | `npm run db:crear-usuario -- --destino … --correo … --nombre "…" --rol SUPERVISOR\|CAPTURISTA` | Alta de usuario (ver abajo) |
+| `node scripts/cargar-plantilla.js --destino … --reemplazar` | Cambia la plantilla de empleados por la de `db/semilla.sql` (sólo si aún no hay registros) |
+| `node scripts/importar-excel.js --destino … --archivo docs/….xlsx [--simular] [--ajustar-montos] [--reemplazar-semana]` | Importa la hoja DATABASE del Excel con cuadre contra el Excel |
+| `npm run build:prueba` / `preview:prueba` | Compila en modo de prueba: datos de la demo en memoria y "hoy" fijo (lo usan las pruebas de navegador) |
 
 ## Base de datos
 
@@ -162,6 +162,25 @@ variantes de supervisor de Semana, Empleados y Tarifas (34 en total). Se regener
 - **Borrado masivo** con casillas en Semana actual y Por empleado (decisión del usuario), sólo supervisor,
   todo o nada, nunca en semanas cerradas. El borrado sigue siendo lógico: el registro conserva quién y
   cuándo lo eliminó.
+- **Comidas por separado** (pedido del usuario, 13 oct 2026): desayuno, almuerzo y cena tienen cada uno su
+  monto (hoy $60, $50 y $70), editable en Tarifas y reglas. Cada registro guarda los tres montos vigentes al
+  capturarlo. Tablas, reportes, historial y exportación muestran cantidad y monto de cada comida.
+- **El supervisor puede eliminar cualquier registro**, también de semanas cerradas (pedido del usuario; el
+  prompt original no lo permitía). Una semana cerrada sigue sin aceptar capturas nuevas.
+- **Recibos para firmar:** cada registro genera un recibo PDF (dos por hoja carta) con el nombre, la fecha de
+  pago (se captura arriba de la tabla), la semana de trabajo, cada concepto con su importe y la línea de firma.
+  Se descargan por fila o de los registros marcados, en Semana actual y Por empleado; cualquier usuario puede.
+- **Plantilla real:** `db/semilla.sql` tiene los 38 empleados únicos de `empleadosactivos horex.pdf` con
+  nombres y puestos homogéneos ("Operador cargador", no "OPERADO CARGADOR"). Duplicados unidos: Erik/Erick Nah
+  Chan, Isac/Isaac Cante Baak, Galue Cetina (dos formas), May Cerantes/Cervantes, Yahir Nah Molina (dos formas),
+  Jesus Ricardo Balam (Chacon), Luis Mauricio Garrido (Marmolejo), Marilu Hernandez Hernandez/Rodriguez y
+  Javier Miss Dzul (Eventual) / Javier Alejandro Miss Dzul (P. Fijo, que quedó). Se corrigen desde Empleados.
+- **Semana 41 importada** de `Copia de Copia de Registro horas extra (15).xlsx` (igual al PDF): 84 registros,
+  238 h, $16,020 de horas extra, $1,320 de desayunos, $210 de cenas: total $17,550, cuadrado contra el Excel.
+  La fila de Erik Alejandro Tzec Chacon del lunes 5 ("Especial local" a $60, la regla da $80) entró como
+  tarifa manual con nota, para respetar su importe. Capturó: "Importación (Excel)", un usuario técnico sin
+  contraseña. Ojo: el resumen del Excel dice "ALMUERZOS $240" y "TOTAL $17,790", pero ninguna fila tiene
+  almuerzo: la suma de las filas da $17,550.
 - Los Excel con datos de nómina (`docs/*.xlsx`) no se suben al repositorio.
 - **Fase 1:** las vistas leen de `src/datos/consultas.js`, que por ahora usa un almacén en memoria
   (`almacenPrueba.js`) que imita a la base: calcula la tarifa al guardar, rechaza semanas cerradas, fechas
@@ -171,8 +190,8 @@ variantes de supervisor de Semana, Empleados y Tarifas (34 en total). Se regener
   datos. En la Fase 4 se calcula con la hora de Mérida (`hoyMerida()` ya existe y tiene pruebas).
 - La web se sirve con `servidor.js` (sólo módulos de Node) y no con el modo estático de Railway: así las
   rutas del cliente, la caché y el reenvío de `/api` quedan bajo nuestro control.
-- **Fase 3:** el login y los roles ya son reales, pero los datos de las pantallas siguen siendo los de la
-  demo, en memoria, hasta la Fase 4. Lo que se capture hoy en producción no se guarda.
+- **Modo de prueba:** `src/configuracion.js` lee `VITE_DATOS_PRUEBA` y `VITE_HOY_FIJO` (`.env.prueba`). Sólo
+  el build de prueba usa el almacén en memoria y "hoy" fijo; producción usa la API y la fecha de Mérida.
 - `@playwright/test` está fijo en 1.64.0: las referencias visuales se tomaron con su Chromium.
 - La semana se calcula con `extract(isoyear/week from fecha)`: verificado en Neon, el 10 oct 2026 es la
   semana 41, igual que en la demo.
