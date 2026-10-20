@@ -180,6 +180,8 @@ variantes de supervisor de Semana, Empleados y Tarifas (34 en total). Se regener
   comidas conservan el monto con que se capturaron. Queda quién editó y cuándo (`editado_por`, `editado_at`).
 - **Registro de sólo comida** para cualquier empleado: sin horas ni tipo y con al menos una comida. Un tipo de
   hora se quita volviendo a tocarlo.
+- **Jornadas de hasta 24 horas** por registro (migración 0006; antes 16): hay personas que trabajan 24 horas
+  seguidas.
 - **Varios tipos de hora el mismo día:** cada tipo es un registro aparte del mismo empleado y fecha. Registrar
   HE lista lo que ya tiene ese día (aviso informativo, no bloquea), "Guardar y capturar otro tipo" conserva
   empleado y fecha, y avisa si una comida ya está en otro registro del día (se pagaría dos veces).

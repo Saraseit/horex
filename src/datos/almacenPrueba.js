@@ -81,7 +81,7 @@ export const almacen = {
     const horas = empleado.genera_he ? Number(datos.horas) : 0;
     if (!tipoClave && horas !== 0) return fallar('Un registro sin tipo de hora no puede llevar horas.');
     if (!tipoClave && !(datos.desayuno || datos.almuerzo || datos.cena)) return fallar('Un registro sin horas extra debe llevar al menos un alimento.');
-    if (horas < 0 || horas > 16) return fallar('Las horas deben estar entre 0 y 16.');
+    if (horas < 0 || horas > 24) return fallar('Las horas deben estar entre 0 y 24.');
     let tarifa;
     if (datos.tarifa_manual && empleado.genera_he) {
       try { exigirSupervisor(datos.usuario); } catch { return fallar('Solo el supervisor puede poner una tarifa manual.'); }
@@ -127,7 +127,7 @@ export const almacen = {
     const tipoClave = empleado.genera_he ? datos.tipo_clave || null : null;
     const horas = tipoClave ? Number(datos.horas) : 0;
     if (!tipoClave && !(datos.desayuno || datos.almuerzo || datos.cena)) return fallar('Un registro sin horas extra debe llevar al menos un alimento.');
-    if (tipoClave && !(horas > 0 && horas <= 16)) return fallar('Las horas deben estar entre 0 y 16.');
+    if (tipoClave && !(horas > 0 && horas <= 24)) return fallar('Las horas deben estar entre 0 y 24.');
     const manual = !!datos.tarifa_manual && !!tipoClave;
     let tarifa = 0;
     if (manual) {

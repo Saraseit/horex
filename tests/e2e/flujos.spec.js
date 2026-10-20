@@ -394,3 +394,17 @@ test.describe('Varios tipos de hora el mismo día', () => {
     await expect(filas.filter({ hasText: 'Especial foránea' })).toHaveCount(1);
   });
 });
+
+test('jornada de más de 16 horas (hasta 24)', async ({ page }) => {
+  await page.goto('/registrar');
+  await page.locator('#emp-search').fill('chan itza');
+  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: /Normal local/ }).click();
+  const guardar = page.getByRole('button', { name: 'Guardar registro' });
+  await page.locator('#num-horas').fill('24.5');
+  await expect(guardar).toBeDisabled();
+  await page.locator('#num-horas').fill('20');
+  await expect(guardar).toBeEnabled();
+  await guardar.click();
+  await expect(page.locator('.toast')).toHaveText('Guardado: Juan Gabriel Chan · $1,200');
+});

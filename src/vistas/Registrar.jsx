@@ -94,7 +94,7 @@ function FormularioRegistro({ edicion }) {
   const elegidos = ALIMENTOS.filter((a) => alimentos[a.clave]);
   const importeAlimentos = elegidos.reduce((t, a) => t + montoDe(a.clave), 0);
   const manualValida = !usaManual || (Number.isFinite(tarifaManual) && tarifaManual >= 0 && manual.nota.trim() !== '');
-  const conHoras = !sinHE && !!tipo && horas > 0 && horas <= 16 && manualValida;
+  const conHoras = !sinHE && !!tipo && horas > 0 && horas <= 24 && manualValida;
   // Registro de sólo comida: sin horas ni tipo, con al menos una comida (también para quien sí genera HE).
   const soloComida = (sinHE || (!tipo && horas === 0)) && importeAlimentos > 0;
   const importe = conHoras ? horas * tarifa : 0;
@@ -218,7 +218,7 @@ function FormularioRegistro({ edicion }) {
               <div className="field">
                 <label className="label" htmlFor="num-horas">Horas</label>
                 <input
-                  id="num-horas" ref={horasRef} className="input mono" type="number" min="0" max="16" step="0.5" placeholder="0.0"
+                  id="num-horas" ref={horasRef} className="input mono" type="number" min="0" max="24" step="0.5" placeholder="0.0"
                   value={horasTexto} disabled={sinHE} onChange={cambio((e) => setHorasTexto(e.target.value))}
                 />
               </div>

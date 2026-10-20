@@ -143,7 +143,13 @@ describe.skipIf(!URL_API || !URL_DUENO)('base de datos (rama desarrollo, como ho
     it('rechaza horas sin tipo y registros sin horas ni alimentos', () => como(usuario.capturista, async (c) => {
       expect((await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, horas: 2, desayuno: true })).error).toBeDefined();
       expect((await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES })).error).toBeDefined();
-      expect((await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, tipo_clave: 'NORMAL_LOCAL', horas: 17 })).error).toBeDefined();
+      expect((await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, tipo_clave: 'NORMAL_LOCAL', horas: 24.5 })).error).toBeDefined();
+    }));
+
+    it('acepta jornadas de hasta 24 horas seguidas', () => como(usuario.capturista, async (c) => {
+      const { error, filas } = await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, tipo_clave: 'NORMAL_LOCAL', horas: 24 });
+      expect(error).toBeUndefined();
+      expect(Number(filas[0].horas)).toBe(24);
     }));
   });
 

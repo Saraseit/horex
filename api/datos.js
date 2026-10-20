@@ -5,6 +5,8 @@ import { ErrorHttp } from './errores.js';
 
 const envolver = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+// Una jornada puede ser de hasta 24 horas seguidas (migración 0006).
+const HORAS_MAXIMAS = 24;
 const PARAMETROS = ['monto_desayuno', 'monto_almuerzo', 'monto_cena', 'tarifa_domingo_eventual'];
 
 const entero = (v, nombre) => {
@@ -154,7 +156,7 @@ export function rutasDatos(bd) {
     const d = req.body ?? {};
     if (!FECHA.test(d.fecha ?? '')) throw new ErrorHttp(400, 'Fecha no válida.');
     const horas = Number(d.horas ?? 0);
-    if (!Number.isFinite(horas) || horas < 0 || horas > 16) throw new ErrorHttp(400, 'Las horas deben estar entre 0 y 16.');
+    if (!Number.isFinite(horas) || horas < 0 || horas > HORAS_MAXIMAS) throw new ErrorHttp(400, `Las horas deben estar entre 0 y ${HORAS_MAXIMAS}.`);
     const manual = !!d.tarifa_manual;
     const fila = await como(req, async (c) => {
       const { rowCount } = await c.query(
@@ -174,7 +176,7 @@ export function rutasDatos(bd) {
     const d = req.body ?? {};
     if (!FECHA.test(d.fecha ?? '')) throw new ErrorHttp(400, 'Fecha no válida.');
     const horas = Number(d.horas ?? 0);
-    if (!Number.isFinite(horas) || horas < 0 || horas > 16) throw new ErrorHttp(400, 'Las horas deben estar entre 0 y 16.');
+    if (!Number.isFinite(horas) || horas < 0 || horas > HORAS_MAXIMAS) throw new ErrorHttp(400, `Las horas deben estar entre 0 y ${HORAS_MAXIMAS}.`);
     const manual = !!d.tarifa_manual;
     if (manual) exigirSupervisor(req);
     const fila = await como(req, async (c) => {
