@@ -6,7 +6,7 @@ const SECCIONES_NAVEGACION = [
   {
     etiqueta: 'Captura',
     items: [
-      { ruta: '/registrar', icono: '⏱', texto: 'Registrar HE' },
+      { ruta: '/registrar', icono: '⏱', texto: 'Registrar HE', captura: true },
       { ruta: '/semana', icono: '▦', texto: 'Semana actual' },
     ],
   },
@@ -27,13 +27,13 @@ const SECCIONES_NAVEGACION = [
   },
 ];
 
-const ROLES = { SUPERVISOR: 'Supervisor', CAPTURISTA: 'Capturista' };
+const ROLES = { SUPERVISOR: 'Supervisor', CAPTURISTA: 'Capturista', CONSULTA: 'Consulta' };
 const estaEn = (pathname, ruta) => pathname === ruta || pathname.startsWith(`${ruta}/`);
 
 export default function Sidebar() {
   const { pathname } = useLocation();
   const navegar = useNavigate();
-  const { usuario, cerrarSesion } = useSesion();
+  const { usuario, puedeCapturar, cerrarSesion } = useSesion();
 
   return (
     <aside className="sidebar">
@@ -44,7 +44,7 @@ export default function Sidebar() {
       {SECCIONES_NAVEGACION.map((s) => (
         <nav key={s.etiqueta} className="nav-section" aria-label={s.etiqueta}>
           <div className="nav-label">{s.etiqueta}</div>
-          {s.items.map((i) => {
+          {s.items.filter((i) => puedeCapturar || !i.captura).map((i) => {
             const activo = estaEn(pathname, i.ruta);
             return (
               <button

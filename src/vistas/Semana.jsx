@@ -5,6 +5,7 @@ import Cargando from '../componentes/Cargando.jsx';
 import ConfirmacionEnLinea from '../componentes/ConfirmacionEnLinea.jsx';
 import EncabezadoVista from '../componentes/EncabezadoVista.jsx';
 import FilaKpis from '../componentes/FilaKpis.jsx';
+import Filtros from '../componentes/Filtros.jsx';
 import Insignia from '../componentes/Insignia.jsx';
 import Kpi from '../componentes/Kpi.jsx';
 import MontoComida from '../componentes/MontoComida.jsx';
@@ -15,9 +16,10 @@ import { columnaSeleccion, useSeleccion } from '../componentes/seleccion.jsx';
 import { useRecibos } from '../componentes/useRecibos.js';
 import { useToast } from '../componentes/useToast.js';
 import {
-  useCerrarSemana, useEliminarRegistros, useRegistrosSemana, useSemanasCerradas, useSemanasConDatos,
+  useCerrarSemana, useEliminarRegistros, useRegistrosSemana, useSemanasCerradas, useSemanasConDatos, useTipos,
 } from '../datos/consultas.js';
 import { porDia, porEmpleado, sumar } from '../logica/agregados.js';
+import { FILTROS_VACIOS, filtrarRegistros } from '../logica/filtros.js';
 import {
   DIAS_CORTOS, claveSemana, compararSemanas, desplazarSemana, diasDeSemana, etiquetaSemana, hoy, indiceDia,
   leerClaveSemana, parseD, rangoSemanaTexto, semanaCaptura, semanasParaElegir,
@@ -45,6 +47,7 @@ function ContenidoSemana({ seleccion, actual }) {
   const registrosQ = useRegistrosSemana(seleccion);
   const semanasQ = useSemanasConDatos();
   const cerradasQ = useSemanasCerradas();
+  const tiposQ = useTipos();
   const eliminar = useEliminarRegistros();
   const cerrar = useCerrarSemana();
   const marcados = useSeleccion();
@@ -52,11 +55,13 @@ function ContenidoSemana({ seleccion, actual }) {
   const [confirmarId, setConfirmarId] = useState(null);
   const [confirmarCierre, setConfirmarCierre] = useState(false);
   const [fechaPago, setFechaPago] = useState(hoy());
+  const [filtros, setFiltros] = useState(FILTROS_VACIOS);
 
-  const consultas = [registrosQ, semanasQ, cerradasQ];
+  const consultas = [registrosQ, semanasQ, cerradasQ, tiposQ];
   if (consultas.some((q) => q.isPending)) return <Cargando error={consultas.find((q) => q.error)?.error} />;
 
-  const regs = registrosQ.data;
+  // Los filtros aplican a todo: indicadores, matriz y detalle.
+  const regs = filtrarRegistros(registrosQ.data, filtros);
   const s = sumar(regs);
   const cerrada = cerradasQ.data.some((c) => c.anio_iso === seleccion.anio && c.semana === seleccion.semana);
   const opciones = semanasParaElegir(semanasQ.data, actual, seleccion);
@@ -104,6 +109,7 @@ function ContenidoSemana({ seleccion, actual }) {
     id: c.clave,
     encabezado: c.etiqueta,
     tipo: 'num',
+    orden: (f) => f[c.importe],
     celda: (f) => <MontoComida monto={f[c.importe]} cantidad={f[c.cantidad]} />,
   }));
 
@@ -111,13 +117,14 @@ function ContenidoSemana({ seleccion, actual }) {
     {
       id: 'empleado',
       encabezado: 'Empleado',
+      orden: (f) => f.lista[0].nombre,
       celda: (f) => <div className="emp-cell">{nombreCorto(f.lista[0].nombre)}<small>{f.lista[0].puesto} · {f.lista[0].grupo}</small></div>,
     },
     ...columnasDias,
-    { id: 'horas', encabezado: 'Horas', tipo: 'num', celda: (f) => fmtHoras(f.horas) },
-    { id: 'he', encabezado: 'Importe HE', tipo: 'num', celda: (f) => fmtMoneda(f.he) },
+    { id: 'horas', encabezado: 'Horas', tipo: 'num', orden: (f) => f.horas, celda: (f) => fmtHoras(f.horas) },
+    { id: 'he', encabezado: 'Importe HE', tipo: 'num', orden: (f) => f.he, celda: (f) => fmtMoneda(f.he) },
     ...columnasComidaTotales,
-    { id: 'total', encabezado: 'Total', tipo: 'num', celda: (f) => <b>{fmtMoneda(f.total)}</b> },
+    { id: 'total', encabezado: 'Total', tipo: 'num', orden: (f) => f.total, celda: (f) => <b>{fmtMoneda(f.total)}</b> },
   ];
 
   function accion(r) {
@@ -143,24 +150,26 @@ function ContenidoSemana({ seleccion, actual }) {
   const ids = detalle.map((r) => r.id);
   const columnasDetalle = [
     columnaSeleccion({ seleccion: marcados, elegibles: ids }),
-    { id: 'fecha', encabezado: 'Fecha', celda: (r) => fechaLarga(r.fecha) },
-    { id: 'empleado', encabezado: 'Empleado', celda: (r) => nombreCorto(r.nombre) },
+    { id: 'fecha', encabezado: 'Fecha', orden: (r) => `${r.fecha} ${String(r.id).padStart(9, '0')}`, celda: (r) => fechaLarga(r.fecha) },
+    { id: 'empleado', encabezado: 'Empleado', orden: (r) => r.nombre, celda: (r) => nombreCorto(r.nombre) },
     {
       id: 'tipo',
       encabezado: 'Tipo',
+      orden: (r) => r.tipo_etiqueta,
       celda: (r) => <><PildoraTipo clave={r.tipo_clave} etiqueta={r.tipo_etiqueta} />{r.tarifa_manual && <> <span className="badge amber" title={r.nota}>manual</span></>}</>,
     },
-    { id: 'horas', encabezado: 'Horas', tipo: 'num', celda: (r) => r.horas || '—' },
-    { id: 'tarifa', encabezado: 'Tarifa', tipo: 'num', celda: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—') },
-    { id: 'importe', encabezado: 'Importe', tipo: 'num', celda: (r) => fmtMoneda(r.importe_he) },
+    { id: 'horas', encabezado: 'Horas', tipo: 'num', orden: (r) => r.horas, celda: (r) => r.horas || '—' },
+    { id: 'tarifa', encabezado: 'Tarifa', tipo: 'num', orden: (r) => r.tarifa_aplicada, celda: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—') },
+    { id: 'importe', encabezado: 'Importe', tipo: 'num', orden: (r) => r.importe_he, celda: (r) => fmtMoneda(r.importe_he) },
     ...COMIDAS.map((c) => ({
       id: c.clave,
       encabezado: c.etiqueta,
       tipo: 'num',
+      orden: (r) => r[`importe_${c.clave}`],
       celda: (r) => (r[c.clave] ? fmtMoneda(r[`importe_${c.clave}`]) : <span className="faint">—</span>),
     })),
-    { id: 'total', encabezado: 'Total', tipo: 'num', celda: (r) => <b>{fmtMoneda(r.total)}</b> },
-    { id: 'capturo', encabezado: 'Capturó', claseCelda: 'faint capturo', estiloCelda: { fontSize: 12 }, celda: (r) => <span title={r.capturado_por_nombre}>{r.capturado_por_nombre}</span> },
+    { id: 'total', encabezado: 'Total', tipo: 'num', orden: (r) => r.total, celda: (r) => <b>{fmtMoneda(r.total)}</b> },
+    { id: 'capturo', encabezado: 'Capturó', orden: (r) => r.capturado_por_nombre, claseCelda: 'faint capturo', estiloCelda: { fontSize: 12 }, celda: (r) => <span title={r.capturado_por_nombre}>{r.capturado_por_nombre}</span> },
     { id: 'accion', encabezado: '', estiloCelda: { textAlign: 'right' }, celda: accion },
   ];
   const seleccionados = detalle.filter((r) => marcados.tiene(r.id));
@@ -191,6 +200,8 @@ function ContenidoSemana({ seleccion, actual }) {
           ))}
       </EncabezadoVista>
 
+      <Filtros valor={filtros} alCambiar={setFiltros} tipos={tiposQ.data} total={registrosQ.data.length} visibles={regs.length} />
+
       <FilaKpis>
         <Kpi etiqueta="Horas extra" valor={fmtHoras(s.horas)} sub={`${s.registros} registros`} />
         <Kpi etiqueta="Importe HE" valor={fmtMoneda(s.he)} sub={`${empleados.length} empleados`} />
@@ -198,7 +209,7 @@ function ContenidoSemana({ seleccion, actual }) {
         <Kpi etiqueta="Total a pagar" valor={fmtMoneda(s.total)} sub="HE + alimentos" hero />
       </FilaKpis>
 
-      <Tarjeta titulo="Horas por empleado y día" subtitulo="Punto ámbar = alimentos ese día · Clic en una fila para ver el detalle del empleado" conCuerpo={false}>
+      <Tarjeta titulo="Horas por empleado y día" subtitulo="Punto ámbar = alimentos ese día · Clic en un encabezado para ordenar, en una fila para ver el detalle" conCuerpo={false}>
         {empleados.length ? (
           <Tabla
             columnas={columnasMatriz}
@@ -215,7 +226,7 @@ function ContenidoSemana({ seleccion, actual }) {
               <td className="num">{fmtMoneda(s.total)}</td>
             </>}
           />
-        ) : <div className="empty-state">Sin registros esta semana</div>}
+        ) : <div className="empty-state">{registrosQ.data.length ? 'Ningún registro con estos filtros' : 'Sin registros esta semana'}</div>}
       </Tarjeta>
 
       <Tarjeta

@@ -180,6 +180,15 @@ variantes de supervisor de Semana, Empleados y Tarifas (34 en total). Se regener
   comidas conservan el monto con que se capturaron. Queda quién editó y cuándo (`editado_por`, `editado_at`).
 - **Registro de sólo comida** para cualquier empleado: sin horas ni tipo y con al menos una comida. Un tipo de
   hora se quita volviendo a tocarlo.
+- **Filtros y orden en los reportes** (21 oct 2026): Semana actual y Por período filtran por empleado (sin acentos
+  ni mayúsculas), grupo y tipo de hora; Por empleado, por tipo de hora. Los filtros aplican a indicadores,
+  gráficas, tablas y totales. Las tablas se ordenan con clic en el encabezado. Por período lista a todos los
+  empleados (antes sólo el top 10).
+- **Cena del personal eventual a $60** (migración 0007, parámetro `monto_cena_eventual`, editable en Tarifas);
+  el personal fijo sigue con `monto_cena`. Registrar HE muestra el monto según el grupo del empleado.
+- **Rol de solo consulta** (`CONSULTA`, migración 0007): RH y Finanzas ven reportes, exportan y descargan
+  recibos; no capturan (no ven Registrar HE), no editan, no borran ni cambian catálogos o tarifas. La base lo
+  impide aunque la API fallara (`puede_capturar()`). Alta: `npm run db:crear-usuario -- --rol CONSULTA …`.
 - **Jornadas de hasta 24 horas** por registro (migración 0006; antes 16): hay personas que trabajan 24 horas
   seguidas.
 - **Varios tipos de hora el mismo día:** cada tipo es un registro aparte del mismo empleado y fecha. Registrar

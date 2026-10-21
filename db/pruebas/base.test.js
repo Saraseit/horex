@@ -46,7 +46,7 @@ describe.skipIf(!URL_API || !URL_DUENO)('base de datos (rama desarrollo, como ho
       // Como supervisor: tarifas y parámetros en su valor base (por si alguien los cambió en desarrollo).
       await c.query(`select set_config('horex.usuario_id', $1, true);
         update tipos_hora t set tarifa = (($2::json) ->> t.clave)::numeric;
-        update parametros set valor = case clave when 'monto_desayuno' then 60 when 'monto_almuerzo' then 50 when 'monto_cena' then 70 when 'tarifa_domingo_eventual' then 70 end;`
+        update parametros set valor = case clave when 'monto_desayuno' then 60 when 'monto_almuerzo' then 50 when 'monto_cena' then 70 when 'monto_cena_eventual' then 60 when 'tarifa_domingo_eventual' then 70 end;`
         .replace('$1', `'${usuario.supervisor}'`).replace('$2', `'${JSON.stringify(TARIFAS_BASE)}'`));
       await c.query("select set_config('horex.usuario_id', $1, true)", [usuarioId ?? '']);
       return await fn(c);
@@ -124,6 +124,13 @@ describe.skipIf(!URL_API || !URL_DUENO)('base de datos (rama desarrollo, como ho
       expect(Number(g.importe_cena)).toBe(70);
     }));
 
+    it('la cena del personal eventual usa su propio monto ($60) y la del fijo el suyo ($70)', () => como(usuario.capturista, async (c) => {
+      const { filas: [ev] } = await insertar(c, { empleado_id: empleado.eventual, fecha: FECHAS.LUNES, tipo_clave: 'NORMAL_LOCAL', horas: 1, cena: true });
+      const { filas: [fi] } = await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, tipo_clave: 'NORMAL_LOCAL', horas: 1, cena: true });
+      expect([Number(ev.monto_cena), Number(ev.importe_cena)]).toEqual([60, 60]);
+      expect([Number(fi.monto_cena), Number(fi.importe_cena)]).toEqual([70, 70]);
+    }));
+
     it('una semana cerrada no acepta registros', () => como(usuario.supervisor, async (c) => {
       const { error } = await insertar(c, { empleado_id: empleado.fijo, fecha: '2026-09-30', tipo_clave: 'NORMAL_LOCAL', horas: 1 });
       expect(error?.message).toMatch(/semana 40 está cerrada/);
@@ -150,6 +157,18 @@ describe.skipIf(!URL_API || !URL_DUENO)('base de datos (rama desarrollo, como ho
       const { error, filas } = await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, tipo_clave: 'NORMAL_LOCAL', horas: 24 });
       expect(error).toBeUndefined();
       expect(Number(filas[0].horas)).toBe(24);
+    }));
+  });
+
+  describe('usuario de consulta (RH, Finanzas)', () => {
+    it('ve los registros pero no captura, no elimina ni cambia parámetros', () => como(usuario.consulta, async (c) => {
+      const { rows: [{ n }] } = await c.query('select count(*)::int n from v_registros');
+      expect(n).toBeGreaterThan(0);
+      const captura = await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, tipo_clave: 'NORMAL_LOCAL', horas: 1 });
+      expect(captura.error?.message).toMatch(/solo consulta/);
+      const { rows: [r] } = await c.query('select id from registros_horas where eliminado_at is null limit 1');
+      expect((await intentar(c, 'update registros_horas set eliminado_at = now() where id = $1', [r.id])).n ?? 0).toBe(0);
+      expect((await intentar(c, "update parametros set valor = 1 where clave = 'monto_cena'")).n ?? 0).toBe(0);
     }));
   });
 

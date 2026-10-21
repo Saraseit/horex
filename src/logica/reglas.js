@@ -69,6 +69,14 @@ export const COMIDAS = [
   { clave: 'cena', etiqueta: 'Cena', plural: 'Cenas', parametro: 'monto_cena', cantidad: 'cenas', importe: 'impCenas' },
 ];
 
+/** Monto vigente de una comida para ese empleado: la cena del personal eventual tiene su propio monto. */
+export function montoComida(clave, parametros, empleado) {
+  if (clave === 'cena' && empleado?.grupo === 'Eventual' && parametros.monto_cena_eventual != null) {
+    return Number(parametros.monto_cena_eventual);
+  }
+  return Number(parametros[`monto_${clave}`] ?? 0);
+}
+
 /** Agrega las columnas calculadas que en Postgres son "generated always as". */
 export function completarRegistro(r) {
   const horas = Number(r.horas);

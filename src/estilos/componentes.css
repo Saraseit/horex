@@ -215,3 +215,13 @@ th.sun,td.sun{background:color-mix(in srgb,var(--accent-light) 55%,transparent)}
 .tbl td.capturo{max-width:72px;overflow:hidden;text-overflow:ellipsis}
 .tbl.compacta td:first-child,.tbl.compacta th:first-child{padding-left:16px}
 .tbl.compacta td:last-child,.tbl.compacta th:last-child{padding-right:16px}
+/* Encabezados ordenables: se ven igual que un encabezado normal; la flecha marca la columna elegida. */
+.tbl th .th-orden{all:unset;cursor:pointer}
+.tbl th .th-orden:hover{color:var(--brand-2)}
+.tbl th .th-orden:focus-visible{outline:2px solid var(--brand-2);outline-offset:2px;border-radius:3px}
+.tbl th .th-flecha{margin-left:4px;font-size:8px;color:var(--brand-2)}
+/* Barra de filtros de los reportes. */
+.filtros{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.filtros .input.sm{min-width:200px}
+.filtros-cuenta{font-size:12px}
+@media (max-width:600px){.filtros .input.sm,.filtros .select.sm{flex:1 1 100%;min-width:0}}

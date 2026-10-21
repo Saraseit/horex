@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import BarraDividida from '../componentes/BarraDividida.jsx';
 import BarrasHorizontales from '../componentes/BarrasHorizontales.jsx';
@@ -5,12 +6,14 @@ import BarrasVerticales from '../componentes/BarrasVerticales.jsx';
 import Cargando from '../componentes/Cargando.jsx';
 import EncabezadoVista from '../componentes/EncabezadoVista.jsx';
 import FilaKpis from '../componentes/FilaKpis.jsx';
+import Filtros from '../componentes/Filtros.jsx';
 import Kpi from '../componentes/Kpi.jsx';
 import MontoComida from '../componentes/MontoComida.jsx';
 import Tabla from '../componentes/Tabla.jsx';
 import Tarjeta from '../componentes/Tarjeta.jsx';
 import { useEmpleados, useRegistrosRango, useSemanasConDatos, useTipos } from '../datos/consultas.js';
 import { barrasDelRango, domingos, porGrupo, porTipo, sumar, top } from '../logica/agregados.js';
+import { FILTROS_VACIOS, filtrarRegistros } from '../logica/filtros.js';
 import {
   anioDe, claveSemana, compararSemanas, desplazarSemana, etiquetaSemana, fechasDeSemanas, leerClaveSemana,
   diasDeSemana, mesAnterior, mismaSemana, nombreMes, semanaCaptura, semanasDelMes, semanasEntre, semanasParaElegir,
@@ -39,6 +42,7 @@ function atajos(fechaRef, actual) {
 export default function ReportePeriodo() {
   const [busqueda, setBusqueda] = useSearchParams();
   const navegar = useNavigate();
+  const [filtros, setFiltros] = useState(FILTROS_VACIOS);
   // Todo se mide desde la semana en captura (la pasada); los meses, desde su jueves.
   const actual = semanaCaptura();
   const rapidos = atajos(diasDeSemana(actual.anio, actual.semana)[3], actual);
@@ -55,7 +59,8 @@ export default function ReportePeriodo() {
   const consultas = [registrosQ, semanasQ, empleadosQ, tiposQ];
   if (consultas.some((q) => q.isPending)) return <Cargando error={consultas.find((q) => q.error)?.error} />;
 
-  const regs = registrosQ.data;
+  // Los filtros aplican a todo el reporte.
+  const regs = filtrarRegistros(registrosQ.data, filtros);
   const tipos = tiposQ.data;
   const empleadosPorId = new Map(empleadosQ.data.map((e) => [e.id, e]));
   const semanas = semanasEntre(desde, hasta);
@@ -68,20 +73,24 @@ export default function ReportePeriodo() {
   const desglose = porTipo(regs)
     .sort((a, b) => ordenTipos.indexOf(a.clave) - ordenTipos.indexOf(b.clave))
     .sort((a, b) => b.total - a.total);
-  const mejores = top(regs, 10);
+  // Todos los empleados del período, del que más cobra al que menos (el # es esa posición).
+  const empleados = top(regs, Infinity);
 
   const fijarRango = (d, h) => setBusqueda({ desde: claveSemana(d), hasta: claveSemana(h) }, { replace: true });
   const cambiarDesde = (clave) => { const d = leerClaveSemana(clave); fijarRango(d, compararSemanas(d, hasta) > 0 ? d : hasta); };
   const cambiarHasta = (clave) => { const h = leerClaveSemana(clave); fijarRango(compararSemanas(h, desde) < 0 ? h : desde, h); };
 
   const columnasTop = [
-    { id: 'n', encabezado: '#', claseCelda: 'mono faint', celda: (f) => mejores.indexOf(f) + 1 },
-    { id: 'empleado', encabezado: 'Empleado', celda: (f) => nombreCorto(f.lista[0].nombre) },
-    { id: 'grupo', encabezado: 'Grupo', celda: (f) => f.lista[0].grupo },
-    { id: 'horas', encabezado: 'Horas', tipo: 'num', celda: (f) => fmtHoras(f.horas) },
-    { id: 'he', encabezado: 'Importe HE', tipo: 'num', celda: (f) => fmtMoneda(f.he) },
-    ...COMIDAS.map((c) => ({ id: c.clave, encabezado: c.etiqueta, tipo: 'num', celda: (f) => <MontoComida monto={f[c.importe]} cantidad={f[c.cantidad]} /> })),
-    { id: 'total', encabezado: 'Total', tipo: 'num', celda: (f) => <b>{fmtMoneda(f.total)}</b> },
+    { id: 'n', encabezado: '#', claseCelda: 'mono faint', orden: (f) => empleados.indexOf(f), celda: (f) => empleados.indexOf(f) + 1 },
+    { id: 'empleado', encabezado: 'Empleado', orden: (f) => f.lista[0].nombre, celda: (f) => nombreCorto(f.lista[0].nombre) },
+    { id: 'grupo', encabezado: 'Grupo', orden: (f) => f.lista[0].grupo, celda: (f) => f.lista[0].grupo },
+    { id: 'horas', encabezado: 'Horas', tipo: 'num', orden: (f) => f.horas, celda: (f) => fmtHoras(f.horas) },
+    { id: 'he', encabezado: 'Importe HE', tipo: 'num', orden: (f) => f.he, celda: (f) => fmtMoneda(f.he) },
+    ...COMIDAS.map((c) => ({
+      id: c.clave, encabezado: c.etiqueta, tipo: 'num', orden: (f) => f[c.importe],
+      celda: (f) => <MontoComida monto={f[c.importe]} cantidad={f[c.cantidad]} />,
+    })),
+    { id: 'total', encabezado: 'Total', tipo: 'num', orden: (f) => f.total, celda: (f) => <b>{fmtMoneda(f.total)}</b> },
   ];
   const selectorSemana = (id, etiqueta, valor, alCambiar) => (
     <select className="select sm" id={id} aria-label={etiqueta} value={claveSemana(valor)} onChange={(e) => alCambiar(e.target.value)}>
@@ -109,6 +118,8 @@ export default function ReportePeriodo() {
         <span className="faint">a</span>
         {selectorSemana('per-hasta', 'Hasta la semana', hasta, cambiarHasta)}
       </EncabezadoVista>
+
+      <Filtros valor={filtros} alCambiar={setFiltros} tipos={tipos} total={registrosQ.data.length} visibles={regs.length} />
 
       <FilaKpis>
         <Kpi etiqueta="Horas extra" valor={fmtHoras(s.horas)} sub={`${s.registros} registros`} />
@@ -162,8 +173,12 @@ export default function ReportePeriodo() {
         </Tarjeta>
       </div>
 
-      <Tarjeta titulo="Top 10 empleados del período" subtitulo="Ordenado por total a pagar · clic para ver detalle" conCuerpo={false}>
-        <Tabla columnas={columnasTop} filas={mejores} clave={(f) => f.empleado_id} alClicFila={(f) => navegar(`/reportes/empleado/${f.empleado_id}`)} />
+      <Tarjeta titulo="Empleados del período" subtitulo="Del que más cobra al que menos · clic en un encabezado para ordenar, en una fila para ver el detalle" conCuerpo={false}>
+        <Tabla
+          columnas={columnasTop} filas={empleados} clave={(f) => f.empleado_id}
+          vacio={<tr><td colSpan={columnasTop.length} className="faint">Sin registros en el período</td></tr>}
+          alClicFila={(f) => navegar(`/reportes/empleado/${f.empleado_id}`)}
+        />
       </Tarjeta>
     </section>
   );

@@ -10,6 +10,7 @@ import { bandera, cargarEntorno, conectar, destino, guardarEnEnv, hostDe } from 
 export const USUARIOS_PRUEBA = [
   { correo: 'supervisor@prueba.horex', nombre: 'Mirian Dzul (prueba)', rol: 'SUPERVISOR', activo: true },
   { correo: 'capturista@prueba.horex', nombre: 'Capturista de prueba', rol: 'CAPTURISTA', activo: true },
+  { correo: 'consulta@prueba.horex', nombre: 'Consulta de prueba', rol: 'CONSULTA', activo: true },
   { correo: 'inactivo@prueba.horex', nombre: 'Usuario inactivo', rol: 'CAPTURISTA', activo: false },
 ];
 

@@ -7,7 +7,7 @@ const envolver = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 // Una jornada puede ser de hasta 24 horas seguidas (migración 0006).
 const HORAS_MAXIMAS = 24;
-const PARAMETROS = ['monto_desayuno', 'monto_almuerzo', 'monto_cena', 'tarifa_domingo_eventual'];
+const PARAMETROS = ['monto_desayuno', 'monto_almuerzo', 'monto_cena', 'monto_cena_eventual', 'tarifa_domingo_eventual'];
 
 const entero = (v, nombre) => {
   const n = Number(v);
@@ -173,6 +173,7 @@ export function rutasDatos(bd) {
   }));
 
   r.post('/registros', envolver(async (req, res) => {
+    if (req.usuario.rol === 'CONSULTA') throw new ErrorHttp(403, 'Tu usuario es de solo consulta: no puede capturar registros.');
     const d = req.body ?? {};
     if (!FECHA.test(d.fecha ?? '')) throw new ErrorHttp(400, 'Fecha no válida.');
     const horas = Number(d.horas ?? 0);

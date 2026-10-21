@@ -16,6 +16,7 @@ insert into parametros (clave, valor, descripcion) values
   ('monto_desayuno', 60, 'Monto del desayuno (entrada a las 6:00 AM o antes)'),
   ('monto_almuerzo', 60, 'Monto del almuerzo (criterio por confirmar)'),
   ('monto_cena', 70, 'Monto de la cena (salida a las 10:00 PM o después)'),
+  ('monto_cena_eventual', 60, 'Monto de la cena del personal eventual (salida a las 10:00 PM o después)'),
   ('tarifa_domingo_eventual', 70, 'Tarifa por hora del personal eventual en domingo (tipo Especial)')
 on conflict (clave) do nothing;
 

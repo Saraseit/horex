@@ -121,6 +121,7 @@ describe.skipIf(!URL_API || !CONTRASENA)('API de sesión (rama desarrollo)', () 
   describe('datos', () => {
     let supervisor;
     let capturista;
+    let consulta;
     const pedir = (cookie, metodo, ruta, cuerpo) => fetch(`${base}/api${ruta}`, {
       method: metodo,
       headers: { cookie, ...(cuerpo && { 'Content-Type': 'application/json' }) },
@@ -134,6 +135,16 @@ describe.skipIf(!URL_API || !CONTRASENA)('API de sesión (rama desarrollo)', () 
     beforeAll(async () => {
       supervisor = cookieDe(await entrar('supervisor@prueba.horex'));
       capturista = cookieDe(await entrar('capturista@prueba.horex'));
+      consulta = cookieDe(await entrar('consulta@prueba.horex'));
+    });
+
+    it('el usuario de consulta ve reportes pero no captura', async () => {
+      const { datos: empleados } = await json(supervisor, 'GET', '/empleados');
+      const fijo = empleados.find((e) => e.activo && e.genera_he);
+      expect((await json(consulta, 'GET', '/registros?anio=2026&semana=41')).estado).toBe(200);
+      expect(await json(consulta, 'POST', '/registros', { empleado_id: fijo.id, fecha: '2026-10-06', tipo_clave: 'NORMAL_LOCAL', horas: 1 }))
+        .toEqual({ estado: 403, datos: { error: 'Tu usuario es de solo consulta: no puede capturar registros.' } });
+      expect((await json(consulta, 'PATCH', '/parametros', { cambios: { monto_cena_eventual: 1 } })).estado).toBe(403);
     });
 
     it('sin sesión no se ve nada', async () => {
@@ -146,7 +157,7 @@ describe.skipIf(!URL_API || !CONTRASENA)('API de sesión (rama desarrollo)', () 
       expect(empleados.length).toBeGreaterThanOrEqual(25);
       expect(empleados[0]).toHaveProperty('genera_he');
       const { datos: parametros } = await json(capturista, 'GET', '/parametros');
-      expect(Object.keys(parametros).sort()).toEqual(['monto_almuerzo', 'monto_cena', 'monto_desayuno', 'tarifa_domingo_eventual']);
+      expect(Object.keys(parametros).sort()).toEqual(['monto_almuerzo', 'monto_cena', 'monto_cena_eventual', 'monto_desayuno', 'tarifa_domingo_eventual']);
       const { datos: semanas } = await json(capturista, 'GET', '/registros/semanas');
       expect(semanas).toContainEqual({ anio: 2026, semana: 41 });
     });

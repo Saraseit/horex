@@ -139,7 +139,7 @@ test.describe('Borrado masivo', () => {
     await page.goto('/semana');
     await page.getByLabel('Seleccionar todos').check();
     await page.getByRole('button', { name: 'Eliminar seleccionados (29)' }).click();
-    await page.getByRole('button', { name: 'No' }).click();
+    await page.getByRole('button', { name: 'No', exact: true }).click();
     await expect(page.locator('.kpi').first()).toContainText('29 registros');
     await page.getByLabel('Seleccionar todos').uncheck();
     await expect(page.getByRole('button', { name: /Eliminar seleccionados/ })).toBeDisabled();
@@ -268,7 +268,7 @@ test.describe('Recibos', () => {
 test.describe('Comidas por separado', () => {
   test('cada comida con su monto: se cambia en Tarifas y se usa al capturar', async ({ page }) => {
     await page.goto('/catalogos/tarifas');
-    await page.getByLabel('Monto Cena').fill('70');
+    await page.getByLabel('Monto Cena', { exact: true }).fill('70');
     await page.getByLabel('Monto Desayuno').fill('60');
     await page.getByRole('button', { name: 'Guardar cambios' }).nth(1).click();
     await expect(page.locator('.toast')).toHaveText('2 montos actualizados · aplica a capturas nuevas');
@@ -407,4 +407,96 @@ test('jornada de más de 16 horas (hasta 24)', async ({ page }) => {
   await expect(guardar).toBeEnabled();
   await guardar.click();
   await expect(page.locator('.toast')).toHaveText('Guardado: Juan Gabriel Chan · $1,200');
+});
+
+test.describe('Filtros y orden en los reportes', () => {
+  test('Semana actual: buscar empleado filtra indicadores, matriz y detalle; se quitan los filtros', async ({ page }) => {
+    await page.goto('/semana/2026/41');
+    const kpi = page.locator('.kpi').first();
+    await expect(kpi).toBeVisible();
+    const registrosTotales = await kpi.textContent();
+    await page.getByRole('searchbox', { name: 'Buscar empleado' }).fill('gamboa');
+    const matriz = page.locator('.card').filter({ hasText: 'Horas por empleado y día' }).locator('tbody tr');
+    await expect(matriz).toHaveCount(1);
+    await expect(matriz.first()).toContainText('Delmer');
+    await expect(kpi).not.toHaveText(registrosTotales);
+    await expect(page.locator('.filtros-cuenta')).toContainText(/\d+ de \d+ registros/);
+    await page.getByRole('button', { name: 'Quitar filtros' }).click();
+    await expect(kpi).toHaveText(registrosTotales);
+  });
+
+  test('Semana actual: filtrar por grupo y por tipo de hora', async ({ page }) => {
+    await page.goto('/semana/2026/41');
+    await page.getByRole('combobox', { name: 'Grupo' }).selectOption('Eventual');
+    const matriz = page.locator('.card').filter({ hasText: 'Horas por empleado y día' }).locator('tbody tr');
+    for (const texto of await matriz.allInnerTexts()) expect(texto).toContain('Eventual');
+    await page.getByRole('combobox', { name: 'Grupo' }).selectOption('');
+    await page.getByRole('combobox', { name: 'Tipo de hora' }).selectOption('MUERTA');
+    const detalle = page.locator('.card').filter({ hasText: 'Registros de la semana' }).locator('tbody tr');
+    for (const texto of await detalle.allInnerTexts()) expect(texto).toContain('Muerta');
+  });
+
+  test('clic en un encabezado ordena la tabla (descendente y luego ascendente)', async ({ page }) => {
+    await page.goto('/semana/2026/41');
+    const tarjeta = page.locator('.card').filter({ hasText: 'Horas por empleado y día' });
+    const total = tarjeta.getByRole('button', { name: 'Total' });
+    const totales = async () => (await tarjeta.locator('tbody tr td:last-child').allInnerTexts()).map((t) => Number(t.replace(/[$,]/g, '')));
+    await total.click();
+    await expect(tarjeta.locator('th[aria-sort="descending"]')).toHaveText(/Total/);
+    const desc = await totales();
+    expect(desc).toEqual([...desc].sort((a, b) => b - a));
+    await total.click();
+    await expect(tarjeta.locator('th[aria-sort="ascending"]')).toHaveText(/Total/);
+    const asc = await totales();
+    expect(asc).toEqual([...asc].sort((a, b) => a - b));
+  });
+
+  test('Por período lista a todos los empleados y se filtra por grupo', async ({ page }) => {
+    await page.goto('/reportes/periodo');
+    const tarjeta = page.locator('.card').filter({ hasText: 'Empleados del período' });
+    await expect(tarjeta.locator('tbody tr').first()).toBeVisible();
+    const todos = await tarjeta.locator('tbody tr').count();
+    expect(todos).toBeGreaterThan(10);
+    await page.getByRole('combobox', { name: 'Grupo' }).selectOption('P. Fijo');
+    await expect(tarjeta.locator('tbody tr')).not.toHaveCount(todos);
+    for (const texto of await tarjeta.locator('tbody tr').allInnerTexts()) expect(texto).toContain('P. Fijo');
+  });
+
+  test('Por empleado se filtra por tipo de hora', async ({ page }) => {
+    await page.goto('/reportes/empleado/14');
+    await page.getByRole('combobox', { name: 'Tipo de hora' }).selectOption('ESPECIAL_FORANEA');
+    const filas = page.locator('.card').filter({ hasText: 'Historial de registros' }).locator('tbody tr');
+    for (const texto of await filas.allInnerTexts()) expect(texto).toContain('Especial foránea');
+  });
+});
+
+test('la cena del personal eventual tiene su propio monto', async ({ page }) => {
+  await page.goto('/catalogos/tarifas');
+  await page.getByRole('spinbutton', { name: 'Monto Cena eventual' }).fill('60');
+  await page.locator('.card').filter({ hasText: 'Alimentos y excepciones' }).getByRole('button', { name: 'Guardar cambios' }).click();
+  await expect(page.locator('.toast')).toContainText('actualizado');
+  // Sin recargar: el almacén de prueba vive en memoria.
+  await page.getByRole('button', { name: /Registrar HE/ }).click();
+  const cena = page.locator('.alimento-toggle', { hasText: 'Cena' });
+  await page.locator('#emp-search').fill('silveira');
+  await page.keyboard.press('Enter');
+  await expect(cena).toContainText('$60');
+  await page.locator('#emp-search').fill('gamboa');
+  await page.keyboard.press('Enter');
+  await expect(cena).toContainText('$50');
+});
+
+test.describe('Usuario de solo consulta', () => {
+  test('no ve Registrar HE, entra a Semana actual y sólo descarga recibos', async ({ page }) => {
+    await comoRol(page, 'CONSULTA');
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/semana$/);
+    await expect(page.getByRole('button', { name: /Registrar HE/ })).toHaveCount(0);
+    await expect(page.locator('.user-role')).toHaveText('Consulta');
+    await expect(page.getByRole('button', { name: 'Recibo', exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Eliminar', exact: true })).toHaveCount(0);
+    await page.goto('/registrar');
+    await expect(page).toHaveURL(/\/semana$/);
+  });
 });

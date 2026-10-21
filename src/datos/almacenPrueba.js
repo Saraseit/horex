@@ -3,7 +3,7 @@
 // trabajen con la forma final de los datos. Se reemplaza por llamadas a la API en las fases 2–4.
 import { compararSemanas, hoy, semanaISO } from '../logica/fechas.js';
 import { normalizar } from '../logica/formato.js';
-import { calcularTarifa, completarRegistro, etiquetaTipo } from '../logica/reglas.js';
+import { calcularTarifa, completarRegistro, etiquetaTipo, montoComida } from '../logica/reglas.js';
 import {
   EMPLEADOS_PRUEBA, PARAMETROS_PRUEBA, SEMANAS_CERRADAS_PRUEBA, TIPOS_PRUEBA, generarRegistrosPrueba,
 } from './datosPrueba.js';
@@ -69,6 +69,7 @@ export const almacen = {
   },
 
   crearRegistro(datos) {
+    if (datos.usuario?.rol === 'CONSULTA') return fallar('Tu usuario es de solo consulta: no puede capturar registros.');
     const empleado = estado.empleados.find((e) => e.id === datos.empleado_id);
     if (!empleado) return fallar('El empleado no existe.');
     if (!empleado.activo) return fallar(`${empleado.nombre} está inactivo: no se le pueden capturar registros.`);
@@ -105,7 +106,7 @@ export const almacen = {
       cena: !!datos.cena,
       monto_desayuno: estado.parametros.monto_desayuno,
       monto_almuerzo: estado.parametros.monto_almuerzo,
-      monto_cena: estado.parametros.monto_cena,
+      monto_cena: montoComida('cena', estado.parametros, empleado),
       capturado_por_nombre: datos.usuario.nombre,
     });
     estado.registros.push(registro);

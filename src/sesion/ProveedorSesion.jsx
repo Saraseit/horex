@@ -37,6 +37,8 @@ export default function ProveedorSesion({ children }) {
   const valor = useMemo(() => ({
     usuario,
     esSupervisor: usuario?.rol === 'SUPERVISOR',
+    // CONSULTA (RH, Finanzas) sólo ve reportes, exporta y descarga recibos.
+    puedeCapturar: usuario?.rol === 'SUPERVISOR' || usuario?.rol === 'CAPTURISTA',
     cargando: consulta.isPending,
     error: consulta.error,
     motivo: consulta.data?.motivo ?? motivoSalida,

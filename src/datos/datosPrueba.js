@@ -45,7 +45,9 @@ export const TIPOS_PRUEBA = [
 ];
 
 // La demo paga todas las comidas a $50.
-export const PARAMETROS_PRUEBA = { monto_desayuno: 50, monto_almuerzo: 50, monto_cena: 50, tarifa_domingo_eventual: 70 };
+export const PARAMETROS_PRUEBA = {
+  monto_desayuno: 50, monto_almuerzo: 50, monto_cena: 50, monto_cena_eventual: 50, tarifa_domingo_eventual: 70,
+};
 
 export const USUARIO_PRUEBA = { id: 'usuario-prueba', nombre: 'Mirian Dzul' };
 

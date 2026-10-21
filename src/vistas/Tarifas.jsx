@@ -92,7 +92,7 @@ const CRITERIOS = {
 function MontosYExcepciones({ parametros, puestosSinHE, editable }) {
   const toast = useToast();
   const guardar = useGuardarParametros();
-  const claves = [...COMIDAS.map((c) => c.parametro), 'tarifa_domingo_eventual'];
+  const claves = [...COMIDAS.map((c) => c.parametro), 'monto_cena_eventual', 'tarifa_domingo_eventual'];
   const [valores, setValores] = useState(() => Object.fromEntries(claves.map((k) => [k, String(parametros[k] ?? '')])));
 
   function guardarCambios() {
@@ -124,9 +124,12 @@ function MontosYExcepciones({ parametros, puestosSinHE, editable }) {
       <div className="rule-list">
         {COMIDAS.map((c) => (
           <div key={c.clave} className="rule" style={{ alignItems: 'center' }}>
-            <span>{c.etiqueta} · {CRITERIOS[c.clave]}</span>{campo(c.parametro, `Monto ${c.etiqueta}`)}
+            <span>{c.etiqueta}{c.clave === 'cena' && ', personal fijo'} · {CRITERIOS[c.clave]}</span>{campo(c.parametro, `Monto ${c.etiqueta}`)}
           </div>
         ))}
+        <div className="rule" style={{ alignItems: 'center' }}>
+          <span>Cena, personal eventual · {CRITERIOS.cena}</span>{campo('monto_cena_eventual', 'Monto Cena eventual')}
+        </div>
         <div className="rule" style={{ alignItems: 'center' }}>
           <span>Domingo, personal eventual ($/hr)</span>{campo('tarifa_domingo_eventual', 'Tarifa domingo eventual')}
         </div>

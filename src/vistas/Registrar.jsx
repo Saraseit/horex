@@ -10,7 +10,7 @@ import {
 } from '../datos/consultas.js';
 import { diasDeSemana, esDomingo, hoy, rangoSemanaTexto, semanaCaptura } from '../logica/fechas.js';
 import { fechaCorta, fechaLarga, fmtHoras, fmtMoneda, nombreCorto, siNo } from '../logica/formato.js';
-import { calcularTarifa, claseTipo, esEspecial, notaRegla } from '../logica/reglas.js';
+import { calcularTarifa, claseTipo, esEspecial, montoComida, notaRegla } from '../logica/reglas.js';
 import { useSesion } from '../sesion/contexto.js';
 
 const ALIMENTOS = [
@@ -89,8 +89,8 @@ function FormularioRegistro({ edicion }) {
     ? (usaManual ? { tarifa: Number.isFinite(tarifaManual) ? tarifaManual : 0, regla: null } : tarifaDe(tipo))
     : { tarifa: 0, regla: null };
   const horas = sinHE ? 0 : parseFloat(horasTexto) || 0;
-  // Una edición conserva los montos de comida guardados; una captura usa los vigentes.
-  const montoDe = (clave) => Number((edicion ?? parametros)[`monto_${clave}`] ?? 0);
+  // Una edición conserva los montos de comida guardados; una captura usa los vigentes (cena del eventual aparte).
+  const montoDe = (clave) => (edicion ? Number(edicion[`monto_${clave}`] ?? 0) : montoComida(clave, parametros, empleado));
   const elegidos = ALIMENTOS.filter((a) => alimentos[a.clave]);
   const importeAlimentos = elegidos.reduce((t, a) => t + montoDe(a.clave), 0);
   const manualValida = !usaManual || (Number.isFinite(tarifaManual) && tarifaManual >= 0 && manual.nota.trim() !== '');

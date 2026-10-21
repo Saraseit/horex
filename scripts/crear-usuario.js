@@ -1,6 +1,7 @@
 // Da de alta (o actualiza) un usuario de Horex con su contraseña. No hay registro público: así se crean.
 // Uso: node scripts/crear-usuario.js --destino produccion --correo ana@empresa.mx --nombre "Ana Pérez"
-//        --rol SUPERVISOR|CAPTURISTA [--contrasena "..."] [--desactivar]
+//        --rol SUPERVISOR|CAPTURISTA|CONSULTA [--contrasena "..."] [--desactivar]
+// CONSULTA: sólo ve reportes, exporta y descarga recibos (RH, Finanzas).
 // Sin --contrasena genera una legible (Horex-XXXX-XXXX-XXXX) y la muestra UNA vez para entregarla.
 import { contrasenaLegible, hashContrasena } from '../api/contrasenas.js';
 import { argumento, bandera, cargarEntorno, conectar, destino } from './comun.js';
@@ -10,8 +11,8 @@ const base = destino();
 const correo = argumento('correo')?.trim().toLowerCase();
 const nombre = argumento('nombre')?.trim();
 const rol = argumento('rol')?.toUpperCase();
-if (!correo || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo) || !nombre || !['SUPERVISOR', 'CAPTURISTA'].includes(rol)) {
-  console.error('Uso: --correo <correo> --nombre "<nombre>" --rol SUPERVISOR|CAPTURISTA [--contrasena "..."] [--desactivar]');
+if (!correo || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo) || !nombre || !['SUPERVISOR', 'CAPTURISTA', 'CONSULTA'].includes(rol)) {
+  console.error('Uso: --correo <correo> --nombre "<nombre>" --rol SUPERVISOR|CAPTURISTA|CONSULTA [--contrasena "..."] [--desactivar]');
   process.exit(1);
 }
 const generada = !argumento('contrasena');
