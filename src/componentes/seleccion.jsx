@@ -23,25 +23,29 @@ export function useSeleccion() {
 /**
  * Primera columna de Tabla con casillas. `elegibles`: ids que se pueden seleccionar;
  * `motivoBloqueo(fila)`: texto de ayuda en las que no (p. ej. "Semana cerrada").
+ * "Seleccionar todos" marca sólo las filas visibles (Tabla le pasa las que dejan sus filtros).
  */
 export function columnaSeleccion({ seleccion, elegibles, motivoBloqueo }) {
-  const marcados = elegibles.filter((id) => seleccion.tiene(id)).length;
-  const todos = elegibles.length > 0 && marcados === elegibles.length;
   return {
     id: 'seleccion',
     claseEncabezado: 'col-casilla',
     claseCelda: 'col-casilla',
-    encabezado: (
-      <input
-        type="checkbox"
-        className="casilla"
-        aria-label="Seleccionar todos"
-        checked={todos}
-        disabled={!elegibles.length}
-        ref={(el) => { if (el) el.indeterminate = marcados > 0 && !todos; }}
-        onChange={() => seleccion.fijar(elegibles, !todos)}
-      />
-    ),
+    encabezado: (visibles) => {
+      const ids = visibles ? visibles.map((r) => r.id).filter((id) => elegibles.includes(id)) : elegibles;
+      const marcados = ids.filter((id) => seleccion.tiene(id)).length;
+      const todos = ids.length > 0 && marcados === ids.length;
+      return (
+        <input
+          type="checkbox"
+          className="casilla"
+          aria-label="Seleccionar todos"
+          checked={todos}
+          disabled={!ids.length}
+          ref={(el) => { if (el) el.indeterminate = marcados > 0 && !todos; }}
+          onChange={() => seleccion.fijar(ids, !todos)}
+        />
+      );
+    },
     celda: (r) => {
       const elegible = elegibles.includes(r.id);
       return (

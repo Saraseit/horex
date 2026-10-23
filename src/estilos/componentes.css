@@ -210,8 +210,8 @@ th.sun,td.sun{background:color-mix(in srgb,var(--accent-light) 55%,transparent)}
 
 /* ── Agregado en Horex: tablas con muchas columnas (comidas por separado) caben en 1366 px ── */
 .tbl.compacta th,.tbl.compacta td{padding-left:6px;padding-right:6px}
-.tbl .acciones{display:flex;justify-content:flex-end;gap:4px}
-.tbl .acciones .btn{padding:3px 6px}
+.tbl .acciones{display:flex;justify-content:flex-end;gap:3px}
+.tbl .acciones .btn{padding:3px 5px}
 .tbl td.capturo{max-width:72px;overflow:hidden;text-overflow:ellipsis}
 .tbl.compacta td:first-child,.tbl.compacta th:first-child{padding-left:16px}
 .tbl.compacta td:last-child,.tbl.compacta th:last-child{padding-right:16px}
@@ -225,3 +225,18 @@ th.sun,td.sun{background:color-mix(in srgb,var(--accent-light) 55%,transparent)}
 .filtros .input.sm{min-width:200px}
 .filtros-cuenta{font-size:12px}
 @media (max-width:600px){.filtros .input.sm,.filtros .select.sm{flex:1 1 100%;min-width:0}}
+/* Autofiltro por columna (como Excel): botón en el encabezado y menú flotante. */
+.tbl th .th-celda{display:inline-flex;align-items:center;gap:1px}
+.tbl th .th-filtro{all:unset;cursor:pointer;font-size:9px;line-height:1;padding:2px;border-radius:3px;color:var(--fg-3);opacity:.6}
+.tbl th .th-filtro:hover,.tbl th .th-filtro[aria-expanded="true"]{opacity:1;color:var(--brand-2);background:var(--brand-light)}
+.tbl th .th-filtro.activo{opacity:1;color:var(--on-brand);background:var(--brand-2)}
+.tbl th .th-filtro:focus-visible{outline:2px solid var(--brand-2);outline-offset:1px}
+.menu-filtro{position:fixed;z-index:60;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);font-size:13px;font-weight:400;text-transform:none;letter-spacing:normal}
+.menu-filtro-orden{all:unset;cursor:pointer;padding:6px 8px;border-radius:var(--radius-sm)}
+.menu-filtro-orden:hover,.menu-filtro-orden:focus-visible{background:var(--surface-2)}
+.menu-filtro .input.sm{width:100%;box-sizing:border-box}
+.menu-filtro-lista{max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px 0}
+.menu-filtro-valor{display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;white-space:nowrap}
+.menu-filtro-valor:hover{background:var(--surface-2)}
+.menu-filtro-valor.todos{font-weight:600;border-bottom:1px solid var(--border)}
+.menu-filtro-acciones{display:flex;justify-content:flex-end;gap:6px}

@@ -288,7 +288,7 @@ test.describe('Comidas por separado', () => {
     await page.goto('/semana');
     await expect(page.locator('.kpi').nth(2)).toContainText(/Des\. \d+ · Alm\. \d+ · Cena \d+/);
     const encabezados = page.locator('.tbl').first().locator('thead th');
-    await expect(encabezados.filter({ hasText: /^(Desayuno|Almuerzo|Cena)$/ })).toHaveCount(3);
+    await expect(encabezados.filter({ hasText: /^(Desayuno|Almuerzo|Cena)/ })).toHaveCount(3);
   });
 });
 
@@ -409,64 +409,100 @@ test('jornada de más de 16 horas (hasta 24)', async ({ page }) => {
   await expect(page.locator('.toast')).toHaveText('Guardado: Juan Gabriel Chan · $1,200');
 });
 
-test.describe('Filtros y orden en los reportes', () => {
-  test('Semana actual: buscar empleado filtra indicadores, matriz y detalle; se quitan los filtros', async ({ page }) => {
+test.describe('Autofiltro en los encabezados (como Excel)', () => {
+  const tarjeta = (page, titulo) => page.locator('.card').filter({ hasText: titulo });
+  const menu = (page) => page.getByRole('dialog', { name: /^Filtrar/ });
+
+  test('filtrar el detalle por empleado con el buscador; el encabezado marca el filtro y se quita', async ({ page }) => {
     await page.goto('/semana/2026/41');
-    const kpi = page.locator('.kpi').first();
-    await expect(kpi).toBeVisible();
-    const registrosTotales = await kpi.textContent();
-    await page.getByRole('searchbox', { name: 'Buscar empleado' }).fill('gamboa');
-    const matriz = page.locator('.card').filter({ hasText: 'Horas por empleado y día' }).locator('tbody tr');
-    await expect(matriz).toHaveCount(1);
-    await expect(matriz.first()).toContainText('Delmer');
-    await expect(kpi).not.toHaveText(registrosTotales);
-    await expect(page.locator('.filtros-cuenta')).toContainText(/\d+ de \d+ registros/);
-    await page.getByRole('button', { name: 'Quitar filtros' }).click();
-    await expect(kpi).toHaveText(registrosTotales);
+    const detalle = tarjeta(page, 'Registros de la semana');
+    const filas = detalle.locator('tbody tr');
+    await expect(filas.first()).toBeVisible();
+    const todas = await filas.count();
+    await detalle.getByRole('button', { name: 'Filtrar Empleado' }).click();
+    await menu(page).getByRole('searchbox', { name: 'Buscar valor' }).fill('gamboa');
+    await menu(page).getByRole('button', { name: 'Aceptar' }).click();
+    await expect(menu(page)).toHaveCount(0);
+    expect(await filas.count()).toBeLessThan(todas);
+    for (const texto of await filas.allInnerTexts()) expect(texto).toContain('Delmer');
+    await expect(detalle.getByRole('button', { name: 'Filtrar Empleado' })).toHaveClass(/activo/);
+    await detalle.getByRole('button', { name: 'Filtrar Empleado' }).click();
+    await menu(page).getByRole('button', { name: 'Quitar filtro' }).click();
+    await expect(filas).toHaveCount(todas);
   });
 
-  test('Semana actual: filtrar por grupo y por tipo de hora', async ({ page }) => {
+  test('desmarcar valores de una columna (tipo) y combinar con otra', async ({ page }) => {
     await page.goto('/semana/2026/41');
-    await page.getByRole('combobox', { name: 'Grupo' }).selectOption('Eventual');
-    const matriz = page.locator('.card').filter({ hasText: 'Horas por empleado y día' }).locator('tbody tr');
-    for (const texto of await matriz.allInnerTexts()) expect(texto).toContain('Eventual');
-    await page.getByRole('combobox', { name: 'Grupo' }).selectOption('');
-    await page.getByRole('combobox', { name: 'Tipo de hora' }).selectOption('MUERTA');
-    const detalle = page.locator('.card').filter({ hasText: 'Registros de la semana' }).locator('tbody tr');
-    for (const texto of await detalle.allInnerTexts()) expect(texto).toContain('Muerta');
+    const detalle = tarjeta(page, 'Registros de la semana');
+    await detalle.getByRole('button', { name: 'Filtrar Tipo' }).click();
+    await menu(page).getByText('Seleccionar todo').click();
+    await menu(page).getByText('Muerta', { exact: true }).click();
+    await menu(page).getByRole('button', { name: 'Aceptar' }).click();
+    const filas = detalle.locator('tbody tr');
+    for (const texto of await filas.allInnerTexts()) expect(texto).toMatch(/Muerta(?! especial)/);
+    // El menú de otra columna sólo ofrece los valores que deja el primer filtro.
+    await detalle.getByRole('button', { name: 'Filtrar Empleado' }).click();
+    const opciones = await menu(page).locator('.menu-filtro-valor:not(.todos)').count();
+    expect(opciones).toBeLessThanOrEqual(await filas.count());
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toHaveCount(0);
   });
 
-  test('clic en un encabezado ordena la tabla (descendente y luego ascendente)', async ({ page }) => {
+  test('ordenar desde el menú y totales de la matriz que siguen al filtro', async ({ page }) => {
     await page.goto('/semana/2026/41');
-    const tarjeta = page.locator('.card').filter({ hasText: 'Horas por empleado y día' });
-    const total = tarjeta.getByRole('button', { name: 'Total' });
-    const totales = async () => (await tarjeta.locator('tbody tr td:last-child').allInnerTexts()).map((t) => Number(t.replace(/[$,]/g, '')));
-    await total.click();
-    await expect(tarjeta.locator('th[aria-sort="descending"]')).toHaveText(/Total/);
-    const desc = await totales();
-    expect(desc).toEqual([...desc].sort((a, b) => b - a));
-    await total.click();
-    await expect(tarjeta.locator('th[aria-sort="ascending"]')).toHaveText(/Total/);
-    const asc = await totales();
-    expect(asc).toEqual([...asc].sort((a, b) => a - b));
+    const matriz = tarjeta(page, 'Horas por empleado y día');
+    await matriz.getByRole('button', { name: 'Filtrar Total' }).click();
+    await menu(page).getByRole('button', { name: 'Ordenar de mayor a menor' }).click();
+    const totales = (await matriz.locator('tbody tr td:last-child').allInnerTexts()).map((t) => Number(t.replace(/[$,]/g, '')));
+    expect(totales).toEqual([...totales].sort((a, b) => b - a));
+    await expect(matriz.locator('tfoot td').first()).toHaveText('Total semana');
+    await matriz.getByRole('button', { name: 'Filtrar Empleado' }).click();
+    await menu(page).getByRole('searchbox', { name: 'Buscar valor' }).fill('gamboa');
+    await menu(page).getByRole('button', { name: 'Aceptar' }).click();
+    await expect(matriz.locator('tbody tr')).toHaveCount(1);
+    await expect(matriz.locator('tfoot td').first()).toHaveText('Total filtrado');
+    await expect(matriz.locator('tfoot td').last()).toHaveText(await matriz.locator('tbody tr td').last().innerText());
   });
 
-  test('Por período lista a todos los empleados y se filtra por grupo', async ({ page }) => {
+  test('"Seleccionar todos" marca sólo las filas visibles y filtrar limpia la selección', async ({ page }) => {
+    await page.goto('/semana/2026/41');
+    const detalle = tarjeta(page, 'Registros de la semana');
+    await detalle.locator('tbody tr').first().getByRole('checkbox').check();
+    await detalle.getByRole('button', { name: 'Filtrar Empleado' }).click();
+    await menu(page).getByRole('searchbox', { name: 'Buscar valor' }).fill('gamboa');
+    await menu(page).getByRole('button', { name: 'Aceptar' }).click();
+    await expect(detalle.getByRole('button', { name: /^Recibos/ })).toHaveText('Recibos');
+    const visibles = await detalle.locator('tbody tr').count();
+    await detalle.getByRole('checkbox', { name: 'Seleccionar todos' }).check();
+    await expect(detalle.getByRole('button', { name: /^Recibos/ })).toHaveText(`Recibos (${visibles})`);
+  });
+
+  test('clic en el nombre de la columna sigue ordenando', async ({ page }) => {
+    await page.goto('/semana/2026/41');
+    const matriz = tarjeta(page, 'Horas por empleado y día');
+    await matriz.getByRole('button', { name: 'Total', exact: true }).click();
+    await expect(matriz.locator('th[aria-sort="descending"]')).toHaveText(/Total/);
+  });
+
+  test('Por período: filtrar la lista de empleados por grupo', async ({ page }) => {
     await page.goto('/reportes/periodo');
-    const tarjeta = page.locator('.card').filter({ hasText: 'Empleados del período' });
-    await expect(tarjeta.locator('tbody tr').first()).toBeVisible();
-    const todos = await tarjeta.locator('tbody tr').count();
-    expect(todos).toBeGreaterThan(10);
-    await page.getByRole('combobox', { name: 'Grupo' }).selectOption('P. Fijo');
-    await expect(tarjeta.locator('tbody tr')).not.toHaveCount(todos);
-    for (const texto of await tarjeta.locator('tbody tr').allInnerTexts()) expect(texto).toContain('P. Fijo');
+    const lista = tarjeta(page, 'Empleados del período');
+    await expect(lista.locator('tbody tr').first()).toBeVisible();
+    await lista.getByRole('button', { name: 'Filtrar Grupo' }).click();
+    await menu(page).getByText('Eventual', { exact: true }).click();
+    await menu(page).getByRole('button', { name: 'Aceptar' }).click();
+    for (const texto of await lista.locator('tbody tr').allInnerTexts()) expect(texto).toContain('P. Fijo');
   });
 
-  test('Por empleado se filtra por tipo de hora', async ({ page }) => {
+  test('Por empleado: filtrar el historial por tipo y el total lo sigue', async ({ page }) => {
     await page.goto('/reportes/empleado/14');
-    await page.getByRole('combobox', { name: 'Tipo de hora' }).selectOption('ESPECIAL_FORANEA');
-    const filas = page.locator('.card').filter({ hasText: 'Historial de registros' }).locator('tbody tr');
-    for (const texto of await filas.allInnerTexts()) expect(texto).toContain('Especial foránea');
+    const historial = tarjeta(page, 'Historial de registros');
+    await historial.getByRole('button', { name: 'Filtrar Tipo' }).click();
+    await menu(page).getByText('Seleccionar todo').click();
+    await menu(page).getByText('Especial foránea', { exact: true }).click();
+    await menu(page).getByRole('button', { name: 'Aceptar' }).click();
+    for (const texto of await historial.locator('tbody tr').allInnerTexts()) expect(texto).toContain('Especial foránea');
+    await expect(historial.locator('tfoot td').first()).toHaveText('Total filtrado');
   });
 });
 

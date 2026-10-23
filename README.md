@@ -180,10 +180,12 @@ variantes de supervisor de Semana, Empleados y Tarifas (34 en total). Se regener
   comidas conservan el monto con que se capturaron. Queda quién editó y cuándo (`editado_por`, `editado_at`).
 - **Registro de sólo comida** para cualquier empleado: sin horas ni tipo y con al menos una comida. Un tipo de
   hora se quita volviendo a tocarlo.
-- **Filtros y orden en los reportes** (21 oct 2026): Semana actual y Por período filtran por empleado (sin acentos
-  ni mayúsculas), grupo y tipo de hora; Por empleado, por tipo de hora. Los filtros aplican a indicadores,
-  gráficas, tablas y totales. Las tablas se ordenan con clic en el encabezado. Por período lista a todos los
-  empleados (antes sólo el top 10).
+- **Autofiltro en las tablas de reportes** (23 oct 2026, como Excel): cada encabezado de Semana actual, Por
+  empleado y Por período tiene un ▾ para ordenar (ascendente o descendente) y filtrar por sus valores, con
+  buscador; se combinan entre columnas. Los totales de la tabla siguen al filtro ("Total filtrado"),
+  "Seleccionar todos" marca sólo lo visible y cambiar un filtro limpia la selección (nada oculto se borra ni
+  se imprime). Clic en el nombre de la columna también ordena. Por período lista a todos los empleados.
+  Editar y Eliminar son botones de ícono (✎, ✕) para que la tabla quepa a 1366 px.
 - **Cena del personal eventual a $60** (migración 0007, parámetro `monto_cena_eventual`, editable en Tarifas);
   el personal fijo sigue con `monto_cena`. Registrar HE muestra el monto según el grupo del empleado.
 - **Rol de solo consulta** (`CONSULTA`, migración 0007): RH y Finanzas ven reportes, exportan y descargan

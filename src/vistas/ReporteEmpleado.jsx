@@ -6,7 +6,6 @@ import BarrasVerticales from '../componentes/BarrasVerticales.jsx';
 import Cargando from '../componentes/Cargando.jsx';
 import EncabezadoVista from '../componentes/EncabezadoVista.jsx';
 import FilaKpis from '../componentes/FilaKpis.jsx';
-import Filtros from '../componentes/Filtros.jsx';
 import Insignia from '../componentes/Insignia.jsx';
 import Kpi from '../componentes/Kpi.jsx';
 import MontoComida from '../componentes/MontoComida.jsx';
@@ -21,7 +20,6 @@ import {
   useConteos, useEliminarRegistros, useEmpleados, useRegistrosEmpleado, useTipos,
 } from '../datos/consultas.js';
 import { barrasDelRango, domingos, porTipo, sumar } from '../logica/agregados.js';
-import { FILTROS_VACIOS, filtrarRegistros } from '../logica/filtros.js';
 import { desplazarSemana, fechasDeSemanas, hoy, semanaCaptura, semanasEntre } from '../logica/fechas.js';
 import { fechaLarga, fmtHoras, fmtMoneda, fmtTarifa, resumenComidas, siNo } from '../logica/formato.js';
 import { COMIDAS, etiquetaTipo } from '../logica/reglas.js';
@@ -59,7 +57,6 @@ export default function ReporteEmpleado() {
   const eliminar = useEliminarRegistros();
   const recibos = useRecibos();
   const [fechaPago, setFechaPago] = useState(hoy());
-  const [filtros, setFiltros] = useState(FILTROS_VACIOS);
 
   const empleadosQ = useEmpleados();
   const conteosQ = useConteos();
@@ -83,8 +80,7 @@ export default function ReporteEmpleado() {
   if (registrosQ.isPending) return <Cargando error={registrosQ.error} />;
 
   // Como la demo: historial de la fecha más reciente a la más antigua.
-  // El filtro por tipo de hora aplica a todo el reporte.
-  const regs = filtrarRegistros(registrosQ.data, filtros).sort((a, b) => b.fecha.localeCompare(a.fecha) || a.id - b.id);
+  const regs = [...registrosQ.data].sort((a, b) => b.fecha.localeCompare(a.fecha) || a.id - b.id);
   const s = sumar(regs);
   const tipos = tiposQ.data;
   const opciones = conRegistros.some((e) => e.id === empleado.id) ? conRegistros : [...conRegistros, empleado];
@@ -115,20 +111,21 @@ export default function ReporteEmpleado() {
   };
 
   const columnasBase = [
-    { id: 'sem', encabezado: 'Sem.', claseCelda: 'mono faint', orden: (r) => r.anio_iso * 100 + r.semana, celda: (r) => r.semana },
-    { id: 'fecha', encabezado: 'Fecha', orden: (r) => `${r.fecha} ${String(r.id).padStart(9, '0')}`, celda: (r) => fechaLarga(r.fecha) },
+    { id: 'sem', encabezado: 'Sem.', claseCelda: 'mono faint', orden: (r) => r.anio_iso * 100 + r.semana, texto: (r) => String(r.semana), celda: (r) => r.semana },
+    { id: 'fecha', encabezado: 'Fecha', orden: (r) => `${r.fecha} ${String(r.id).padStart(9, '0')}`, texto: (r) => fechaLarga(r.fecha), celda: (r) => fechaLarga(r.fecha) },
     { id: 'tipo', encabezado: 'Tipo', orden: (r) => r.tipo_etiqueta, celda: (r) => <PildoraTipo clave={r.tipo_clave} etiqueta={r.tipo_etiqueta} /> },
-    { id: 'horas', encabezado: 'Horas', tipo: 'num', orden: (r) => r.horas, celda: (r) => r.horas || '—' },
-    { id: 'tarifa', encabezado: 'Tarifa', tipo: 'num', orden: (r) => r.tarifa_aplicada, celda: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—') },
-    { id: 'he', encabezado: 'Importe HE', tipo: 'num', orden: (r) => r.importe_he, celda: (r) => fmtMoneda(r.importe_he) },
+    { id: 'horas', encabezado: 'Horas', tipo: 'num', orden: (r) => r.horas, texto: (r) => String(r.horas || '—'), celda: (r) => r.horas || '—' },
+    { id: 'tarifa', encabezado: 'Tarifa', tipo: 'num', orden: (r) => r.tarifa_aplicada, texto: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—'), celda: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—') },
+    { id: 'he', encabezado: 'Importe HE', tipo: 'num', orden: (r) => r.importe_he, texto: (r) => fmtMoneda(r.importe_he), celda: (r) => fmtMoneda(r.importe_he) },
     ...COMIDAS.map((c) => ({
       id: c.clave,
       encabezado: c.etiqueta,
       tipo: 'num',
       orden: (r) => r[`importe_${c.clave}`],
+      texto: (r) => (r[c.clave] ? fmtMoneda(r[`importe_${c.clave}`]) : '—'),
       celda: (r) => (r[c.clave] ? fmtMoneda(r[`importe_${c.clave}`]) : <span className="faint">—</span>),
     })),
-    { id: 'total', encabezado: 'Total', tipo: 'num', orden: (r) => r.total, celda: (r) => <b>{fmtMoneda(r.total)}</b> },
+    { id: 'total', encabezado: 'Total', tipo: 'num', orden: (r) => r.total, texto: (r) => fmtMoneda(r.total), celda: (r) => <b>{fmtMoneda(r.total)}</b> },
     {
       id: 'recibo',
       encabezado: '',
@@ -137,7 +134,7 @@ export default function ReporteEmpleado() {
         <span className="acciones">
           <button type="button" className="btn btn-ghost btn-xs" disabled={recibos.generando} onClick={() => recibos.descargar([r], fechaPago)}>Recibo</button>
           {esSupervisor && (
-            <button type="button" className="btn btn-ghost btn-xs" onClick={() => navegar(`/registrar?editar=${r.id}`)}>Editar</button>
+            <button type="button" className="btn btn-ghost btn-xs" aria-label="Editar" title="Editar registro" onClick={() => navegar(`/registrar?editar=${r.id}`)}>✎</button>
           )}
         </span>
       ),
@@ -164,8 +161,6 @@ export default function ReporteEmpleado() {
           {opciones.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
         </select>
       </EncabezadoVista>
-
-      <Filtros valor={filtros} alCambiar={setFiltros} tipos={tipos} campos={['tipo']} total={registrosQ.data.length} visibles={regs.length} />
 
       <FilaKpis>
         <Kpi etiqueta="Horas extra" valor={fmtHoras(s.horas)} sub={descripcion} />
@@ -204,7 +199,7 @@ export default function ReporteEmpleado() {
 
       <Tarjeta
         titulo="Historial de registros"
-        subtitulo="Clic en un encabezado para ordenar"
+        subtitulo="▾ en un encabezado para ordenar y filtrar"
         conCuerpo={false}
         accion={(
           <AccionesRegistros
@@ -223,15 +218,20 @@ export default function ReporteEmpleado() {
           clave={(r) => r.id}
           compacta
           claseFila={(r) => (marcados.tiene(r.id) ? 'seleccionada' : undefined)}
-          pie={<>
-            <td colSpan={columnas.length - columnasBase.length + 3}>Total</td>
-            <td className="num">{fmtHoras(s.horas)}</td>
-            <td />
-            <td className="num">{fmtMoneda(s.he)}</td>
-            {COMIDAS.map((c) => <td key={c.clave} className="num"><MontoComida monto={s[c.importe]} cantidad={s[c.cantidad]} /></td>)}
-            <td className="num">{fmtMoneda(s.total)}</td>
-            <td />
-          </>}
+          alFiltrar={marcados.limpiar}
+          pie={(visibles) => {
+            // Los totales siguen a los filtros de la tabla.
+            const t = sumar(visibles);
+            return <>
+              <td colSpan={columnas.length - columnasBase.length + 3}>{visibles.length === regs.length ? 'Total' : 'Total filtrado'}</td>
+              <td className="num">{fmtHoras(t.horas)}</td>
+              <td />
+              <td className="num">{fmtMoneda(t.he)}</td>
+              {COMIDAS.map((c) => <td key={c.clave} className="num"><MontoComida monto={t[c.importe]} cantidad={t[c.cantidad]} /></td>)}
+              <td className="num">{fmtMoneda(t.total)}</td>
+              <td />
+            </>;
+          }}
         />
       </Tarjeta>
     </section>
