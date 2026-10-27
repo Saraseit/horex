@@ -77,7 +77,7 @@ export function generarRegistrosPrueba() {
 
   const registros = [];
   const agregar = (o) => registros.push({
-    id: registros.length + 1, desayuno: false, almuerzo: false, cena: false,
+    id: registros.length + 1, desayuno: false, almuerzo: false, cena: false, contrato: '0',
     monto_desayuno: PARAMETROS_PRUEBA.monto_desayuno, monto_almuerzo: PARAMETROS_PRUEBA.monto_almuerzo,
     monto_cena: PARAMETROS_PRUEBA.monto_cena, capturado_por_nombre: USUARIO_PRUEBA.nombre, ...o,
   });

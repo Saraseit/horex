@@ -202,6 +202,21 @@ describe.skipIf(!URL_API || !CONTRASENA)('API de sesión (rama desarrollo)', () 
       expect((await json(supervisor, 'GET', `/registros/${r.id}`)).estado).toBe(404);
     });
 
+    it('contrato: se captura, se conserva si la edición no lo manda y se corrige', async () => {
+      const { datos: empleados } = await json(supervisor, 'GET', '/empleados');
+      const fijo = empleados.find((e) => e.activo && e.genera_he && e.grupo === 'P. Fijo');
+      const base = { empleado_id: fijo.id, fecha: '2026-10-06', tipo_clave: 'NORMAL_LOCAL', horas: 1 };
+      const { datos: sin } = await json(capturista, 'POST', '/registros', base);
+      expect(sin.contrato).toBe('0');
+      const { datos: r } = await json(capturista, 'POST', '/registros', { ...base, contrato: ' 17106 ' });
+      expect(r.contrato).toBe('17106');
+      const cambios = { fecha: '2026-10-06', tipo_clave: 'NORMAL_LOCAL', horas: 2 };
+      expect((await json(supervisor, 'PATCH', `/registros/${r.id}`, cambios)).datos.contrato).toBe('17106');
+      expect((await json(supervisor, 'PATCH', `/registros/${r.id}`, { ...cambios, contrato: '' })).datos.contrato).toBe('0');
+      expect((await json(capturista, 'POST', '/registros', { ...base, contrato: '1'.repeat(21) })).estado).toBe(400);
+      await json(supervisor, 'POST', '/registros/eliminar', { ids: [sin.id, r.id] });
+    });
+
     it('registro de sólo comida para quien sí genera horas extra', async () => {
       const { datos: empleados } = await json(supervisor, 'GET', '/empleados');
       const fijo = empleados.find((e) => e.activo && e.genera_he);

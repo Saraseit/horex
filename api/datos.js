@@ -19,6 +19,13 @@ const monto = (v, nombre) => {
   if (!Number.isFinite(n) || n < 0 || n > 100000) throw new ErrorHttp(400, `${nombre}: escribe un monto válido.`);
   return Math.round(n * 100) / 100;
 };
+/** Contrato: texto libre de hasta 20 caracteres; vacío = "0" (sin contrato). undefined = no se mandó. */
+const contrato = (v) => {
+  if (v === undefined) return undefined;
+  const limpio = String(v ?? '').trim() || '0';
+  if (limpio.length > 20) throw new ErrorHttp(400, 'El contrato no puede pasar de 20 caracteres.');
+  return limpio;
+};
 const exigirSupervisor = (req) => {
   if (req.usuario.rol !== 'SUPERVISOR') throw new ErrorHttp(403, 'Solo el supervisor puede hacer esto.');
 };
@@ -149,7 +156,7 @@ export function rutasDatos(bd) {
     res.json(fila);
   }));
 
-  // Edición (sólo supervisor): fecha, tipo, horas, comidas y tarifa manual. El empleado no cambia.
+  // Edición (sólo supervisor): fecha, tipo, horas, comidas, contrato y tarifa manual. El empleado no cambia.
   r.patch('/registros/:id', envolver(async (req, res) => {
     exigirSupervisor(req);
     const id = entero(req.params.id, 'Registro');
@@ -161,10 +168,10 @@ export function rutasDatos(bd) {
     const fila = await como(req, async (c) => {
       const { rowCount } = await c.query(
         `update registros_horas set fecha = $2, tipo_clave = $3, horas = $4, tarifa_aplicada = $5, tarifa_manual = $6,
-           nota = $7, desayuno = $8, almuerzo = $9, cena = $10
+           nota = $7, desayuno = $8, almuerzo = $9, cena = $10, contrato = coalesce($11, contrato)
          where id = $1 and eliminado_at is null`,
         [id, d.fecha, d.tipo_clave || null, d.tipo_clave ? horas : 0, manual ? monto(d.tarifa_aplicada, 'Tarifa') : 0, manual,
-          manual ? String(d.nota ?? '').trim() : null, !!d.desayuno, !!d.almuerzo, !!d.cena],
+          manual ? String(d.nota ?? '').trim() : null, !!d.desayuno, !!d.almuerzo, !!d.cena, contrato(d.contrato) ?? null],
       );
       if (!rowCount) throw new ErrorHttp(404, 'El registro no existe o fue eliminado.');
       return (await c.query('select * from v_registros where id = $1', [id])).rows[0];
@@ -182,11 +189,11 @@ export function rutasDatos(bd) {
     if (manual) exigirSupervisor(req);
     const fila = await como(req, async (c) => {
       const { rows: [{ id }] } = await c.query(
-        `insert into registros_horas (empleado_id, fecha, tipo_clave, horas, tarifa_aplicada, tarifa_manual, nota, desayuno, almuerzo, cena)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id`,
+        `insert into registros_horas (empleado_id, fecha, tipo_clave, horas, tarifa_aplicada, tarifa_manual, nota, desayuno, almuerzo, cena, contrato)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id`,
         [entero(d.empleado_id, 'Empleado'), d.fecha, d.tipo_clave || null, horas,
           manual ? monto(d.tarifa_aplicada, 'Tarifa') : 0, manual, manual ? String(d.nota ?? '').trim() : null,
-          !!d.desayuno, !!d.almuerzo, !!d.cena],
+          !!d.desayuno, !!d.almuerzo, !!d.cena, contrato(d.contrato) ?? '0'],
       );
       return (await c.query('select * from v_registros where id = $1', [id])).rows[0];
     });

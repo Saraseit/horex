@@ -104,6 +104,7 @@ export const almacen = {
       desayuno: !!datos.desayuno,
       almuerzo: !!datos.almuerzo,
       cena: !!datos.cena,
+      contrato: String(datos.contrato ?? '').trim() || '0',
       monto_desayuno: estado.parametros.monto_desayuno,
       monto_almuerzo: estado.parametros.monto_almuerzo,
       monto_cena: montoComida('cena', estado.parametros, empleado),
@@ -151,6 +152,7 @@ export const almacen = {
       desayuno: !!datos.desayuno,
       almuerzo: !!datos.almuerzo,
       cena: !!datos.cena,
+      contrato: datos.contrato === undefined ? r.contrato : String(datos.contrato).trim() || '0',
       editado_at: new Date().toISOString(),
     });
     estado.registros[estado.registros.indexOf(r)] = editado;

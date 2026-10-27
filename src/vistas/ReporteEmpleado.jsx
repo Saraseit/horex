@@ -114,6 +114,13 @@ export default function ReporteEmpleado() {
     { id: 'sem', encabezado: 'Sem.', claseCelda: 'mono faint', orden: (r) => r.anio_iso * 100 + r.semana, texto: (r) => String(r.semana), celda: (r) => r.semana },
     { id: 'fecha', encabezado: 'Fecha', orden: (r) => `${r.fecha} ${String(r.id).padStart(9, '0')}`, texto: (r) => fechaLarga(r.fecha), celda: (r) => fechaLarga(r.fecha) },
     { id: 'tipo', encabezado: 'Tipo', orden: (r) => r.tipo_etiqueta, celda: (r) => <PildoraTipo clave={r.tipo_clave} etiqueta={r.tipo_etiqueta} /> },
+    {
+      id: 'contrato',
+      encabezado: 'Contrato',
+      claseCelda: 'mono',
+      orden: (r) => r.contrato,
+      celda: (r) => (r.contrato === '0' ? <span className="faint">0</span> : r.contrato),
+    },
     { id: 'horas', encabezado: 'Horas', tipo: 'num', orden: (r) => r.horas, texto: (r) => String(r.horas || '—'), celda: (r) => r.horas || '—' },
     { id: 'tarifa', encabezado: 'Tarifa', tipo: 'num', orden: (r) => r.tarifa_aplicada, texto: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—'), celda: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—') },
     { id: 'he', encabezado: 'Importe HE', tipo: 'num', orden: (r) => r.importe_he, texto: (r) => fmtMoneda(r.importe_he), celda: (r) => fmtMoneda(r.importe_he) },

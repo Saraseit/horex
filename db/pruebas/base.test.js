@@ -158,6 +158,20 @@ describe.skipIf(!URL_API || !URL_DUENO)('base de datos (rama desarrollo, como ho
       expect(error).toBeUndefined();
       expect(Number(filas[0].horas)).toBe(24);
     }));
+
+    it('contrato: "0" por omisión, texto libre de hasta 20 caracteres y lo corrige el supervisor', () => como(usuario.supervisor, async (c) => {
+      const { filas: [r] } = await insertar(c, { empleado_id: empleado.fijo, fecha: FECHAS.LUNES, tipo_clave: 'NORMAL_LOCAL', horas: 1 });
+      expect(r.contrato).toBe('0');
+      const sql = "insert into registros_horas (empleado_id, fecha, tipo_clave, horas, contrato) values ($1, $2, 'NORMAL_LOCAL', 1, $3) returning contrato";
+      expect((await intentar(c, sql, [empleado.fijo, FECHAS.LUNES, '17106'])).filas[0].contrato).toBe('17106');
+      expect((await intentar(c, sql, [empleado.fijo, FECHAS.LUNES, ' '])).error).toBeDefined();
+      expect((await intentar(c, sql, [empleado.fijo, FECHAS.LUNES, '1'.repeat(21)])).error).toBeDefined();
+      const editado = await intentar(c, 'update registros_horas set contrato = $2 where id = $1 returning contrato, tarifa_aplicada', [r.id, '17144']);
+      expect(editado.filas[0]).toMatchObject({ contrato: '17144' });
+      expect(Number(editado.filas[0].tarifa_aplicada)).toBe(Number(r.tarifa_aplicada));
+      const { rows: [v] } = await c.query('select contrato from v_registros where id = $1', [r.id]);
+      expect(v.contrato).toBe('17144');
+    }));
   });
 
   describe('usuario de consulta (RH, Finanzas)', () => {

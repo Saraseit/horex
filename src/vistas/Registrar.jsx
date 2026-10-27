@@ -50,6 +50,8 @@ function FormularioRegistro({ edicion }) {
   const [horasTexto, setHorasTexto] = useState(edicion?.horas ? String(edicion.horas) : '');
   const [tipo, setTipo] = useState(edicion?.tipo_clave ?? null);
   const [fecha, setFecha] = useState(edicion?.fecha ?? diasCaptura[0]);
+  // Contrato: casi siempre "0" (sin contrato); a veces un número como 17106.
+  const [contrato, setContrato] = useState(edicion?.contrato ?? '0');
   const [alimentos, setAlimentos] = useState(edicion
     ? { desayuno: edicion.desayuno, almuerzo: edicion.almuerzo, cena: edicion.cena }
     : SIN_ALIMENTOS);
@@ -117,6 +119,7 @@ function FormularioRegistro({ edicion }) {
 
   const datos = () => ({
     fecha,
+    contrato: contrato.trim() || '0',
     tipo_clave: conHoras ? tipo : null,
     horas: conHoras ? horas : 0,
     ...alimentos,
@@ -144,8 +147,10 @@ function FormularioRegistro({ edicion }) {
         setAlimentos(SIN_ALIMENTOS);
         setManual(SIN_MANUAL);
         if (otroTipo) {
+          // Mismo empleado, fecha y contrato: sólo cambia el tipo de hora.
           horasRef.current?.focus();
         } else {
+          setContrato('0');
           setEmpleadoId(null);
           setVueltaBuscador((v) => v + 1);
         }
@@ -227,6 +232,16 @@ function FormularioRegistro({ edicion }) {
                 <input id="fecha" className="input" type="date" max={fechaMaxima} value={fecha} onChange={cambio((e) => setFecha(e.target.value))} />
               </div>
             </div>
+            <div className="row-2">
+              <div className="field">
+                <label className="label" htmlFor="contrato">Contrato</label>
+                <input
+                  id="contrato" className="input mono" type="text" inputMode="numeric" maxLength={20} placeholder="0"
+                  value={contrato} onFocus={(e) => e.target.select()} onChange={cambio((e) => setContrato(e.target.value))}
+                />
+              </div>
+              <div className="faint contrato-ayuda">0 si no hay contrato</div>
+            </div>
             <div className="field">
               <span className="label" id="tipo-label">Tipo de hora</span>
               <div className="tipo-grid" role="group" aria-labelledby="tipo-label">
@@ -298,6 +313,7 @@ function FormularioRegistro({ edicion }) {
             <div className="resumen-rows">
               <div className="resumen-row"><span className="r-label">Empleado</span><span className="r-value txt">{empleado ? nombreCorto(empleado.nombre) : '—'}</span></div>
               <div className="resumen-row"><span className="r-label">Fecha</span><span className="r-value txt">{fecha ? fechaLarga(fecha) : '—'}</span></div>
+              <div className="resumen-row"><span className="r-label">Contrato</span><span className="r-value">{contrato.trim() || '0'}</span></div>
               <div className="resumen-row">
                 <span className="r-label">Horas × tarifa</span>
                 <span className="r-value">{sinHE ? 'No aplica' : soloComida ? 'Sólo comida' : horas && tarifa ? `${horas} × $${tarifa}` : '—'}</span>

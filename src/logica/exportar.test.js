@@ -23,8 +23,10 @@ describe('datosExport', () => {
 
   it('detalle: formato de la hoja DATABASE, una fila por registro', () => {
     const d = exportar('detalle');
-    expect(d.encabezados).toHaveLength(15);
+    expect(d.encabezados).toHaveLength(16);
+    expect(d.encabezados.at(-1)).toBe('Contrato');
     expect(d.filas).toHaveLength(29);
+    expect(d.filas.every((f) => f.at(-1) === '0')).toBe(true);
     expect(d.filas[0].slice(5, 8)).toEqual(['NORMAL FORÁNEA', 41, '2026-10-05']);
     const totalHE = d.filas.reduce((a, f) => a + f[10], 0);
     expect(totalHE).toBe(5945);

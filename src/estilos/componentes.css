@@ -209,7 +209,7 @@ th.sun,td.sun{background:color-mix(in srgb,var(--accent-light) 55%,transparent)}
 :root[data-theme="dark"] .login-logo{color:var(--fg)}
 
 /* ── Agregado en Horex: tablas con muchas columnas (comidas por separado) caben en 1366 px ── */
-.tbl.compacta th,.tbl.compacta td{padding-left:6px;padding-right:6px}
+.tbl.compacta th,.tbl.compacta td{padding-left:5px;padding-right:5px}
 .tbl .acciones{display:flex;justify-content:flex-end;gap:3px}
 .tbl .acciones .btn{padding:3px 5px}
 .tbl td.capturo{max-width:72px;overflow:hidden;text-overflow:ellipsis}
@@ -221,6 +221,7 @@ th.sun,td.sun{background:color-mix(in srgb,var(--accent-light) 55%,transparent)}
 .tbl th .th-orden:focus-visible{outline:2px solid var(--brand-2);outline-offset:2px;border-radius:3px}
 .tbl th .th-flecha{margin-left:4px;font-size:8px;color:var(--brand-2)}
 /* Barra de filtros de los reportes. */
+.contrato-ayuda{align-self:end;font-size:12px;padding-bottom:10px}
 .filtros{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .filtros .input.sm{min-width:200px}
 .filtros-cuenta{font-size:12px}

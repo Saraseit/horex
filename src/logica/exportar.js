@@ -49,11 +49,11 @@ export function datosExport({ registros, empleados, tipos, formato }) {
         etiquetaTipo(r.tipo_clave, tipos).toUpperCase(), r.semana, r.fecha,
         r.horas, r.tarifa_aplicada, r.importe_he,
         r.importe_desayuno, r.importe_almuerzo, r.importe_cena,
-        r.importe_alimentos,
+        r.importe_alimentos, r.contrato ?? '0',
       ];
     });
   return {
-    encabezados: ['Nombre', 'Puesto', 'Grupo', 'Reclutador', 'IMSS', 'Tipo hora', 'Semana', 'Fecha', 'Horas', 'Valor hora', 'Importe horas', 'Desayuno', 'Almuerzo', 'Cena', '$ Alimentos'],
+    encabezados: ['Nombre', 'Puesto', 'Grupo', 'Reclutador', 'IMSS', 'Tipo hora', 'Semana', 'Fecha', 'Horas', 'Valor hora', 'Importe horas', 'Desayuno', 'Almuerzo', 'Cena', '$ Alimentos', 'Contrato'],
     filas,
     pie: null,
     moneda: [9, 10, 11, 12, 13, 14],

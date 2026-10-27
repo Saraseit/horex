@@ -186,6 +186,11 @@ variantes de supervisor de Semana, Empleados y Tarifas (34 en total). Se regener
   "Seleccionar todos" marca sólo lo visible y cambiar un filtro limpia la selección (nada oculto se borra ni
   se imprime). Clic en el nombre de la columna también ordena. Por período lista a todos los empleados.
   Editar y Eliminar son botones de ícono (✎, ✕) para que la tabla quepa a 1366 px.
+- **Contrato por registro** (27 oct 2026, migración 0008): texto libre de hasta 20 caracteres, casi siempre "0" y
+  a veces un número como 17106. Se captura en Registrar HE (empieza en 0; "Guardar y capturar otro tipo" lo
+  conserva), lo corrige el supervisor al editar y tiene su columna, con autofiltro, en Semana actual y Por
+  empleado, y al final de la exportación de detalle. Para que quepa, Semana actual ya no tiene la columna
+  "Capturó": quién capturó se ve al pasar el mouse sobre la fecha.
 - **Cena del personal eventual a $60** (migración 0007, parámetro `monto_cena_eventual`, editable en Tarifas);
   el personal fijo sigue con `monto_cena`. Registrar HE muestra el monto según el grupo del empleado.
 - **Rol de solo consulta** (`CONSULTA`, migración 0007): RH y Finanzas ven reportes, exportan y descargan

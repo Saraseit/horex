@@ -146,13 +146,20 @@ function ContenidoSemana({ seleccion, actual }) {
   const ids = detalle.map((r) => r.id);
   const columnasDetalle = [
     columnaSeleccion({ seleccion: marcados, elegibles: ids }),
-    { id: 'fecha', encabezado: 'Fecha', orden: (r) => `${r.fecha} ${String(r.id).padStart(9, '0')}`, texto: (r) => fechaLarga(r.fecha), celda: (r) => fechaLarga(r.fecha) },
+    { id: 'fecha', encabezado: 'Fecha', orden: (r) => `${r.fecha} ${String(r.id).padStart(9, '0')}`, texto: (r) => fechaLarga(r.fecha), celda: (r) => <span title={`Capturó: ${r.capturado_por_nombre}`}>{fechaLarga(r.fecha)}</span> },
     { id: 'empleado', encabezado: 'Empleado', orden: (r) => r.nombre, texto: (r) => nombreCorto(r.nombre), celda: (r) => nombreCorto(r.nombre) },
     {
       id: 'tipo',
       encabezado: 'Tipo',
       orden: (r) => r.tipo_etiqueta,
       celda: (r) => <><PildoraTipo clave={r.tipo_clave} etiqueta={r.tipo_etiqueta} />{r.tarifa_manual && <> <span className="badge amber" title={r.nota}>manual</span></>}</>,
+    },
+    {
+      id: 'contrato',
+      encabezado: 'Contrato',
+      claseCelda: 'mono',
+      orden: (r) => r.contrato,
+      celda: (r) => (r.contrato === '0' ? <span className="faint">0</span> : r.contrato),
     },
     { id: 'horas', encabezado: 'Horas', tipo: 'num', orden: (r) => r.horas, texto: (r) => String(r.horas || '—'), celda: (r) => r.horas || '—' },
     { id: 'tarifa', encabezado: 'Tarifa', tipo: 'num', orden: (r) => r.tarifa_aplicada, texto: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—'), celda: (r) => (r.tarifa_aplicada ? fmtTarifa(r.tarifa_aplicada) : '—') },
@@ -166,7 +173,6 @@ function ContenidoSemana({ seleccion, actual }) {
       celda: (r) => (r[c.clave] ? fmtMoneda(r[`importe_${c.clave}`]) : <span className="faint">—</span>),
     })),
     { id: 'total', encabezado: 'Total', tipo: 'num', orden: (r) => r.total, texto: (r) => fmtMoneda(r.total), celda: (r) => <b>{fmtMoneda(r.total)}</b> },
-    { id: 'capturo', encabezado: 'Capturó', claseCelda: 'faint capturo', estiloCelda: { fontSize: 12 }, celda: (r) => <span title={r.capturado_por_nombre}>{r.capturado_por_nombre}</span> },
     { id: 'accion', encabezado: '', estiloCelda: { textAlign: 'right' }, celda: accion },
   ];
   const seleccionados = detalle.filter((r) => marcados.tiene(r.id));

@@ -536,3 +536,44 @@ test.describe('Usuario de solo consulta', () => {
     await expect(page).toHaveURL(/\/semana$/);
   });
 });
+
+test.describe('Contrato', () => {
+  test('se captura en Registrar HE, aparece en su columna y se filtra; por omisión es 0', async ({ page }) => {
+    await page.goto('/registrar');
+    await expect(page.locator('#contrato')).toHaveValue('0');
+    await page.locator('#fecha').fill('2026-10-08');
+    await page.locator('#emp-search').fill('chan itza');
+    await page.keyboard.press('Enter');
+    await page.locator('#num-horas').fill('2');
+    await page.getByRole('button', { name: /Normal local/ }).click();
+    await page.locator('#contrato').fill('17106');
+    await expect(page.locator('.resumen-row', { hasText: 'Contrato' })).toContainText('17106');
+    await page.getByRole('button', { name: 'Guardar registro' }).click();
+    await expect(page.locator('.toast')).toContainText('Guardado: Juan Gabriel Chan');
+    // Después de guardar vuelve a 0 para el siguiente empleado.
+    await expect(page.locator('#contrato')).toHaveValue('0');
+    // Sin recargar: el almacén de prueba vive en memoria.
+    await page.getByRole('button', { name: 'Ver semana' }).click();
+    const detalle = page.locator('.card').filter({ hasText: 'Registros de la semana' });
+    await detalle.getByRole('button', { name: 'Filtrar Contrato' }).click();
+    const menu = page.getByRole('dialog', { name: /^Filtrar/ });
+    await menu.getByText('Seleccionar todo').click();
+    await menu.getByText('17106', { exact: true }).click();
+    await menu.getByRole('button', { name: 'Aceptar' }).click();
+    await expect(detalle.locator('tbody tr')).toHaveCount(1);
+    await expect(detalle.locator('tbody tr')).toContainText('Juan Gabriel Chan');
+    await expect(detalle.locator('tbody tr')).toContainText('17106');
+  });
+
+  test('"Guardar y capturar otro tipo" conserva el contrato', async ({ page }) => {
+    await page.goto('/registrar');
+    await page.locator('#emp-search').fill('chan itza');
+    await page.keyboard.press('Enter');
+    await page.locator('#num-horas').fill('2');
+    await page.getByRole('button', { name: /Normal local/ }).click();
+    await page.locator('#contrato').fill('16619');
+    await page.getByRole('button', { name: 'Guardar y capturar otro tipo' }).click();
+    await expect(page.locator('.toast')).toContainText('Guardado');
+    await expect(page.locator('#contrato')).toHaveValue('16619');
+  });
+});
