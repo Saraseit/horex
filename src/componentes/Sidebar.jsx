@@ -38,7 +38,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <div className="logo-mark"><span>H</span> Horex</div>
+        <div className="logo-mark"><span>H</span> ProHorex</div>
         <div className="logo-sub">Control de horas extra</div>
       </div>
       {SECCIONES_NAVEGACION.map((s) => (

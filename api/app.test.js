@@ -21,7 +21,7 @@ describe('contraseñas', () => {
   });
 
   it('genera contraseñas legibles', () => {
-    expect(contrasenaLegible()).toMatch(/^Horex-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
+    expect(contrasenaLegible()).toMatch(/^ProHorex-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
   });
 });
 

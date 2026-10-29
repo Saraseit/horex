@@ -48,9 +48,9 @@ describe('formatos de archivo', () => {
 
   it('nombre del archivo', () => {
     expect(nombreArchivo({ desde: { anio: 2026, semana: 38 }, hasta: { anio: 2026, semana: 41 }, formato: 'resumen', extension: 'xlsx' }))
-      .toBe('Horex_Sem38-41_resumen.xlsx');
+      .toBe('ProHorex_Sem38-41_resumen.xlsx');
     expect(nombreArchivo({ desde: { anio: 2026, semana: 41 }, hasta: { anio: 2026, semana: 41 }, formato: 'detalle', extension: 'csv' }))
-      .toBe('Horex_Sem41_detalle.csv');
+      .toBe('ProHorex_Sem41_detalle.csv');
   });
 
   it('xlsx con encabezado y totales', async () => {

@@ -14,5 +14,7 @@ export default defineConfig({
     // Las pruebas de base y API van contra Neon: la primera conexión despierta la base.
     testTimeout: 20_000,
     hookTimeout: 60_000,
+    // Base y API escriben en la misma rama de desarrollo: en paralelo, una ve los registros temporales de la otra.
+    fileParallelism: false,
   },
 });

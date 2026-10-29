@@ -207,7 +207,7 @@ test('exportar .csv con BOM y fila TOTAL', async ({ page }) => {
     page.waitForEvent('download'),
     page.getByRole('button', { name: 'Descargar .csv' }).click(),
   ]);
-  expect(descarga.suggestedFilename()).toBe('Horex_Sem38-41_resumen.csv');
+  expect(descarga.suggestedFilename()).toBe('ProHorex_Sem38-41_resumen.csv');
   const ruta = await descarga.path();
   const texto = (await import('node:fs')).readFileSync(ruta, 'utf8');
   expect(texto.startsWith('﻿')).toBe(true);

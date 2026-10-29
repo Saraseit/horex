@@ -80,14 +80,14 @@ export function nombreArchivo({ desde, hasta, formato, extension }) {
   if (desde.anio !== hasta.anio) semanas = `${desde.anio}-${desde.semana}_a_${hasta.anio}-${hasta.semana}`;
   else if (desde.semana === hasta.semana) semanas = `${desde.semana}`;
   else semanas = `${desde.semana}-${hasta.semana}`;
-  return `Horex_Sem${semanas}_${formato}.${extension}`;
+  return `ProHorex_Sem${semanas}_${formato}.${extension}`;
 }
 
 /** Libro .xlsx (ArrayBuffer): encabezado en negritas sobre --brand, moneda MXN, anchos ajustados y fila de totales. */
-export async function aXLSX(d, nombreHoja = 'Horex') {
+export async function aXLSX(d, nombreHoja = 'ProHorex') {
   const { default: ExcelJS } = await import('exceljs');
   const libro = new ExcelJS.Workbook();
-  libro.creator = 'Horex';
+  libro.creator = 'ProHorex';
   const hoja = libro.addWorksheet(nombreHoja);
 
   const convertir = (fila) => fila.map((v, i) => {

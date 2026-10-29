@@ -286,7 +286,7 @@ function FormularioRegistro({ edicion }) {
             )}
             {domingo && (
               <Alerta tipo="info" icono="◆">
-                Domingo — día de descanso. Usa <strong>Especial</strong>: ${tarifaEspecial}/hr personal fijo, ${Number(parametros.tarifa_domingo_eventual)}/hr eventual. Horex aplica la tarifa según el grupo.
+                Domingo — día de descanso. Usa <strong>Especial</strong>: ${tarifaEspecial}/hr personal fijo, ${Number(parametros.tarifa_domingo_eventual)}/hr eventual. ProHorex aplica la tarifa según el grupo.
               </Alerta>
             )}
           </Tarjeta>

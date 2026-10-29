@@ -13,7 +13,7 @@ const TITULOS = [
   ['/catalogos/tarifas', 'Tarifas y reglas'],
 ];
 
-const tituloDe = (pathname) => TITULOS.find(([ruta]) => pathname.startsWith(ruta))?.[1] ?? 'Horex';
+const tituloDe = (pathname) => TITULOS.find(([ruta]) => pathname.startsWith(ruta))?.[1] ?? 'ProHorex';
 
 /** .app = Sidebar + .main (Topbar + .content con la vista). */
 export default function Shell() {
@@ -24,7 +24,7 @@ export default function Shell() {
   // Como la demo: al cambiar de pestaña el contenido vuelve arriba.
   useEffect(() => {
     if (contenido.current) contenido.current.scrollTop = 0;
-    document.title = `${titulo} · Horex`;
+    document.title = `${titulo} · ProHorex`;
   }, [titulo]);
 
   return (

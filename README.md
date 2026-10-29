@@ -186,6 +186,9 @@ variantes de supervisor de Semana, Empleados y Tarifas (34 en total). Se regener
   "Seleccionar todos" marca sólo lo visible y cambiar un filtro limpia la selección (nada oculto se borra ni
   se imprime). Clic en el nombre de la columna también ordena. Por período lista a todos los empleados.
   Editar y Eliminar son botones de ícono (✎, ✕) para que la tabla quepa a 1366 px.
+- **Nombre visible: ProHorex** (29 oct 2026), como la familia de herramientas del usuario: logo, inicio de sesión,
+  título de la pestaña, avisos, archivos exportados (`ProHorex_Sem…`) y contraseñas generadas (`ProHorex-…`).
+  Lo interno (repositorio, servicios de Railway, base, cookie) sigue como `horex`.
 - **Contrato por registro** (27 oct 2026, migración 0008): texto libre de hasta 20 caracteres, casi siempre "0" y
   a veces un número como 17106. Se captura en Registrar HE (empieza en 0; "Guardar y capturar otro tipo" lo
   conserva), lo corrige el supervisor al editar y tiene su columna, con autofiltro, en Semana actual y Por

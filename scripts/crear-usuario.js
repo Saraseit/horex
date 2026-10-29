@@ -1,8 +1,8 @@
-// Da de alta (o actualiza) un usuario de Horex con su contraseña. No hay registro público: así se crean.
+// Da de alta (o actualiza) un usuario de ProHorex con su contraseña. No hay registro público: así se crean.
 // Uso: node scripts/crear-usuario.js --destino produccion --correo ana@empresa.mx --nombre "Ana Pérez"
 //        --rol SUPERVISOR|CAPTURISTA|CONSULTA [--contrasena "..."] [--desactivar]
 // CONSULTA: sólo ve reportes, exporta y descarga recibos (RH, Finanzas).
-// Sin --contrasena genera una legible (Horex-XXXX-XXXX-XXXX) y la muestra UNA vez para entregarla.
+// Sin --contrasena genera una legible (ProHorex-XXXX-XXXX-XXXX) y la muestra UNA vez para entregarla.
 import { contrasenaLegible, hashContrasena } from '../api/contrasenas.js';
 import { argumento, bandera, cargarEntorno, conectar, destino } from './comun.js';
 

@@ -36,7 +36,7 @@ export default function Login() {
     <div className="login-pagina">
       <form className="card login-tarjeta" onSubmit={entrar}>
         <div className="card-body stack" style={{ gap: 16, paddingTop: 24 }}>
-          <div className="login-logo"><span>H</span> Horex</div>
+          <div className="login-logo"><span>H</span> ProHorex</div>
           <div>
             <h2 className="login-titulo">Iniciar sesión</h2>
             <p className="muted" style={{ fontSize: 13 }}>Control de horas extra</p>

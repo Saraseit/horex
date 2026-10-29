@@ -25,9 +25,9 @@ export async function verificarContrasena(contrasena, guardado) {
   return timingSafeEqual(esperado, calculado);
 }
 
-/** Contraseña legible para entregar a una persona: Horex-XXXX-XXXX (sin 0/O, 1/I/L). */
+/** Contraseña legible para entregar a una persona: ProHorex-XXXX-XXXX-XXXX (sin 0/O, 1/I/L). */
 export function contrasenaLegible() {
   const letras = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   const bloque = () => Array.from({ length: 4 }, () => letras[randomInt(letras.length)]).join('');
-  return `Horex-${bloque()}-${bloque()}-${bloque()}`;
+  return `ProHorex-${bloque()}-${bloque()}-${bloque()}`;
 }
